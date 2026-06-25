@@ -102,16 +102,16 @@ const AppShell: React.FC = () => {
   const breadcrumbs = getBreadcrumbs(location.pathname)
 
   return (
-    <div className="min-h-screen bg-[#070a13] text-white">
-      {/* Background gradients */}
+    <div className="min-h-screen surface-bg text-theme-primary">
+      {/* Background ambiance — subtle warm emerald / copper glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div
-          className="absolute -left-10 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full blur-3xl opacity-40"
-          style={{ backgroundColor: 'rgba(56, 189, 248, 0.12)' }}
+          className="absolute -left-10 top-1/2 h-96 w-96 -translate-y-1/2 rounded-full blur-3xl opacity-30"
+          style={{ backgroundColor: 'rgba(var(--accent-rgb), 0.10)' }}
         />
         <div
-          className="absolute right-0 top-1/4 h-96 w-96 rounded-full blur-3xl opacity-30"
-          style={{ backgroundColor: 'rgba(34, 211, 238, 0.10)' }}
+          className="absolute right-0 top-1/4 h-96 w-96 rounded-full blur-3xl opacity-20"
+          style={{ backgroundColor: 'rgba(var(--accent-2-rgb), 0.10)' }}
         />
       </div>
 
@@ -139,13 +139,13 @@ const AppShell: React.FC = () => {
         />
 
         {/* Sub-header Navigation Bar (Breadcrumbs & Search Trigger) */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-white/5 bg-slate-950/20 px-6 py-3 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b surface-border surface-panel-transparent px-6 py-3 gap-2">
           {/* Breadcrumb links */}
-          <div className="flex items-center gap-1.5 text-2xs font-semibold text-slate-400">
+          <div className="flex items-center gap-1.5 text-2xs font-semibold text-theme-secondary">
             {breadcrumbs.map((bc, idx) => (
               <React.Fragment key={bc}>
-                {idx > 0 && <span className="text-slate-600 font-bold">/</span>}
-                <span className={idx === breadcrumbs.length - 1 ? 'text-cyan-400 font-bold' : ''}>
+                {idx > 0 && <span className="text-theme-muted font-bold">/</span>}
+                <span className={idx === breadcrumbs.length - 1 ? 'text-accent font-bold' : ''}>
                   {bc}
                 </span>
               </React.Fragment>
@@ -156,7 +156,7 @@ const AppShell: React.FC = () => {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-3 py-1.5 text-3xs font-semibold text-slate-400 hover:bg-white/10 hover:text-white transition w-full sm:w-56"
+            className="flex items-center justify-between rounded-xl border surface-border surface-panel px-3 py-1.5 text-3xs font-semibold text-theme-secondary hover:text-theme-primary transition w-full sm:w-56"
           >
             <div className="flex items-center gap-2">
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -164,7 +164,7 @@ const AppShell: React.FC = () => {
               </svg>
               <span>Search commands...</span>
             </div>
-            <kbd className="rounded bg-white/5 px-1.5 py-0.5 border border-white/5 text-4xs">
+            <kbd className="rounded surface-panel-strong px-1.5 py-0.5 border surface-border text-4xs">
               Ctrl+K
             </kbd>
           </button>

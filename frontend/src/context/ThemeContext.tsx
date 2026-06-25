@@ -1,20 +1,20 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 export type ThemeKey =
-  | 'obsidian-midnight'
-  | 'arctic-light'
-  | 'neon-cyber'
-  | 'emerald-pro'
-  | 'sunset-amber'
-  | 'crimson-command'
+  | 'graphite-emerald'
+  | 'ivory-warm'
+  | 'espresso-gold'
+  | 'sage-linen'
+  | 'copper-noir'
+  | 'midnight-charcoal'
 
 export const themeOptions: { key: ThemeKey; label: string }[] = [
-  { key: 'obsidian-midnight', label: 'Obsidian Midnight' },
-  { key: 'arctic-light', label: 'Arctic Light' },
-  { key: 'neon-cyber', label: 'Neon Cyber' },
-  { key: 'emerald-pro', label: 'Emerald Pro' },
-  { key: 'sunset-amber', label: 'Sunset Amber' },
-  { key: 'crimson-command', label: 'Crimson Command' },
+  { key: 'graphite-emerald', label: 'Graphite Emerald' },
+  { key: 'ivory-warm', label: 'Ivory Warm' },
+  { key: 'espresso-gold', label: 'Espresso Gold' },
+  { key: 'sage-linen', label: 'Sage Linen' },
+  { key: 'copper-noir', label: 'Copper Noir' },
+  { key: 'midnight-charcoal', label: 'Midnight Charcoal' },
 ]
 
 const STORAGE_KEY = 'smartserve-appearance'
@@ -34,7 +34,7 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeKey>('obsidian-midnight')
+  const [theme, setThemeState] = useState<ThemeKey>('graphite-emerald')
   const [compactMode, setCompactModeState] = useState(false)
   const [highContrast, setHighContrastState] = useState(false)
   const [animationsEnabled, setAnimationsEnabledState] = useState(true)

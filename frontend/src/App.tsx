@@ -66,17 +66,17 @@ const Welcome: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#070A13] px-4 py-16 text-white">
-      <div className="mx-auto max-w-3xl rounded-[2rem] border border-white/10 bg-slate-950/80 p-10 shadow-2xl shadow-cyan-500/5 backdrop-blur-xl">
+    <div className="flex min-h-screen items-center justify-center surface-bg px-4 py-16 text-theme-primary">
+      <div className="mx-auto max-w-3xl rounded-[2rem] border surface-border surface-panel-strong p-10 shadow-soft-lg backdrop-blur-xl">
         <div className="text-center">
-          <p className="text-sm uppercase tracking-[0.35em] text-cyan-300/70">SmartServe AI</p>
-          <h1 className="mt-6 text-5xl font-semibold">Restaurant Operating System</h1>
-          <p className="mt-4 text-lg text-slate-400">The new unified restaurant control interface for menu, operations, and service flow.</p>
+          <p className="text-sm uppercase tracking-[0.35em] text-accent">SmartServe AI</p>
+          <h1 className="mt-6 font-display text-5xl font-semibold text-theme-primary">Restaurant Operating System</h1>
+          <p className="mt-4 text-lg text-theme-secondary">The new unified restaurant control interface for menu, operations, and service flow.</p>
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-            <Link to="/auth/login" className="rounded-3xl bg-cyan-500/15 px-8 py-3 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/25">
+            <Link to="/auth/login" className="rounded-3xl bg-accent px-8 py-3 text-sm font-semibold text-[var(--surface)] transition hover:brightness-110">
               Sign In
             </Link>
-            <Link to="/auth/register" className="rounded-3xl bg-amber-500/15 px-8 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/25">
+            <Link to="/auth/register" className="rounded-3xl bg-accent-2-soft px-8 py-3 text-sm font-semibold text-accent-2 transition hover:brightness-110">
               Create Account
             </Link>
           </div>
