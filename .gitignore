@@ -1,0 +1,58 @@
+# Node
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Build
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Frontend build artifacts
+frontend/dist/
+
+# Backend uploads and generated assets (keep locally)
+backend/uploads/
+backend/backend/uploads/
+backend/uploads/debug/
+backend/backend/uploads/debug/
+
+# OCR models and outputs
+backend/python/easyocr_models/
+backend/scripts/ocr_test_files/
+
+# Model and trained data
+*.pth
+*.traineddata
+
+# Images, PDFs and debug outputs
+*.jpeg
+*.jpg
+*.png
+*.pdf
+*.json.pre.png
+
+# Vim swap files
+*.swp
+# Node
+node_modules/
+dist/
+
+# Python
+venv/
+.venv/
+__pycache__/
+
+# Env
+.env
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
