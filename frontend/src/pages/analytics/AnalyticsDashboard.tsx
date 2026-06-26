@@ -56,8 +56,11 @@ const AnalyticsDashboard: React.FC = () => {
     window.addEventListener('order_completed', onUpdate);
     window.addEventListener('order_cancelled', onUpdate);
 
-    const pollInterval = sseActive ? 10000 : 2000;
-    const iv = setInterval(onUpdate, pollInterval);
+    let iv: any = null;
+    if (!sseActive) {
+      console.log('SSE is inactive, enabling 3s fallback polling for analytics...');
+      iv = setInterval(onUpdate, 3000);
+    }
 
     return () => {
       window.removeEventListener('ordersUpdated', onUpdate);
@@ -65,7 +68,7 @@ const AnalyticsDashboard: React.FC = () => {
       window.removeEventListener('order_updated', onUpdate);
       window.removeEventListener('order_completed', onUpdate);
       window.removeEventListener('order_cancelled', onUpdate);
-      clearInterval(iv);
+      if (iv) clearInterval(iv);
     };
   }, [token, sseActive]);
 
