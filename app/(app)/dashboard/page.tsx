@@ -24,16 +24,10 @@ export default function DashboardPage() {
   const s = dashboardStats
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Command Center"
-        description="Saffron & Sage · Live operations overview"
-        actions={
-          <>
-            <Button variant="outline">Export Report</Button>
-            <Button>New Order</Button>
-          </>
-        }
-      />
+      <PageHeader title="Command Center" description="Saffron & Sage · Live operations overview">
+        <Button variant="outline">Export Report</Button>
+        <Button>New Order</Button>
+      </PageHeader>
 
       <motion.div
         variants={container}
