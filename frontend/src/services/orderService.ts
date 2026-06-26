@@ -1,5 +1,5 @@
 // File: frontend/src/services/orderService.ts
-// API service for order operations
+// API service for order operations. Connected to backend Express CRUD and details timeline.
 
 import axios from 'axios';
 import { API_BASE } from '../config';
