@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 import { Sparkles, TrendingUp, Flame } from "lucide-react"
 import { AnimatedNumber } from "@/components/shared/animated-number"
+import { LivePulse } from "@/components/shared/live-pulse"
 import { currentUser, dashboardStats } from "@/lib/mock-data"
 
 function getGreeting(hour: number) {
@@ -94,6 +95,15 @@ export function GreetingHero() {
           </div>
           <p className="mt-1 text-xs text-sidebar-foreground/60">vs. same time last week</p>
         </div>
+      </div>
+
+      {/* Live service trace — the restaurant's heartbeat across the bottom of the hero */}
+      <div className="relative mt-6 flex items-center gap-3 border-t border-sidebar-border/60 pt-4">
+        <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/55">
+          Live service pulse
+        </span>
+        <LivePulse className="h-7 flex-1 text-sidebar-accent" speed={3.6} />
+        <span className="shrink-0 text-[11px] font-medium text-sidebar-accent">{s.healthScore}% healthy</span>
       </div>
     </motion.div>
   )

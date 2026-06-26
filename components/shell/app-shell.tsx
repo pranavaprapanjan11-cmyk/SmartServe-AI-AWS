@@ -1,13 +1,27 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Sidebar } from "@/components/shell/sidebar"
 import { Header } from "@/components/shell/header"
 import { AIAssistant } from "@/components/shell/ai-assistant"
+import { CommandPalette } from "@/components/shell/command-palette"
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  // Global ⌘K / Ctrl+K shortcut to summon the command palette.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        setPaletteOpen((o) => !o)
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [])
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
@@ -41,12 +55,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header onMenuClick={() => setMobileOpen(true)} />
+        <Header onMenuClick={() => setMobileOpen(true)} onSearchClick={() => setPaletteOpen(true)} />
         <main className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="mx-auto w-full max-w-[1500px] p-4 md:p-6">{children}</div>
         </main>
       </div>
 
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <AIAssistant />
     </div>
   )

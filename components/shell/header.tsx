@@ -1,9 +1,8 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { useState } from "react"
 import { useTheme } from "next-themes"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { Menu, Search, Bell, Sun, Moon, ChevronRight, Settings, LogOut, User, Building2 } from "lucide-react"
 import { findNavTitle } from "@/lib/navigation"
 import { currentUser, notifications } from "@/lib/mock-data"
@@ -19,11 +18,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
-export function Header({ onMenuClick }: { onMenuClick: () => void }) {
+export function Header({ onMenuClick, onSearchClick }: { onMenuClick: () => void; onSearchClick: () => void }) {
   const pathname = usePathname()
   const title = findNavTitle(pathname)
   const { theme, setTheme } = useTheme()
-  const [searchOpen, setSearchOpen] = useState(false)
   const unread = notifications.filter((n) => n.unread).length
 
   return (
@@ -44,7 +42,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="ml-auto flex items-center gap-1.5">
         <div className="hidden lg:block">
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={onSearchClick}
             className="flex h-9 w-56 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-muted-foreground transition-colors hover:border-primary/40"
           >
             <Search className="h-4 w-4" />
@@ -52,7 +50,7 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
             <kbd className="ml-auto rounded border border-border bg-muted px-1.5 text-[10px]">⌘K</kbd>
           </button>
         </div>
-        <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSearchOpen(true)} aria-label="Search">
+        <Button variant="ghost" size="icon" className="lg:hidden" onClick={onSearchClick} aria-label="Search">
           <Search className="h-5 w-5" />
         </Button>
 
@@ -128,47 +126,6 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-start justify-center bg-background/70 p-4 pt-24 backdrop-blur-sm"
-            onClick={() => setSearchOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: -12, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -12, scale: 0.98 }}
-              className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
-                <Search className="h-5 w-5 text-muted-foreground" />
-                <input
-                  autoFocus
-                  placeholder="Search orders, tables, customers, menu items..."
-                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                />
-                <kbd className="rounded border border-border bg-muted px-1.5 text-[10px] text-muted-foreground">ESC</kbd>
-              </div>
-              <div className="p-2">
-                {["Order #2841 — Table 12", "Reservation: Nandini Rao", "Inventory: Paneer", "Menu: Butter Chicken"].map((s) => (
-                  <button
-                    key={s}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted"
-                  >
-                    <Search className="h-4 w-4 text-muted-foreground" />
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </header>
   )
 }
