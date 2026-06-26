@@ -11,6 +11,7 @@ import {
   BarChart3,
   Sparkles,
   Building2,
+  FileText,
   type LucideIcon,
 } from "lucide-react"
 
@@ -49,7 +50,10 @@ export const navSections: NavSection[] = [
   },
   {
     label: "AI Suite",
-    items: [{ title: "AI Studio", href: "/ai", icon: Sparkles }],
+    items: [
+      { title: "AI Studio", href: "/ai", icon: Sparkles },
+      { title: "OCR Scanner", href: "/ocr", icon: FileText }
+    ],
   },
   {
     label: "Workspace",

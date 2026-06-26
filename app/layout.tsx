@@ -34,14 +34,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+import { AuthProvider } from "@/context/AuthContext"
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className="bg-background">
       <body className={`${jakarta.variable} ${fraunces.variable} ${jetbrains.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          {children}
-          <Toaster position="top-right" richColors />
-        </ThemeProvider>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+            {children}
+            <Toaster position="top-right" richColors />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )

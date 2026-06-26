@@ -12,11 +12,18 @@ const drivers = [
   { label: "Kitchen flow", value: 89 },
 ]
 
-export function HealthRing() {
-  const score = dashboardStats.healthScore
+export function HealthRing({ score = 88 }: { score?: number }) {
   const radius = 56
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
+
+  // Compute label based on score
+  const getStatusLabel = (s: number) => {
+    if (s >= 90) return "Excellent"
+    if (s >= 75) return "Healthy"
+    if (s >= 60) return "Needs Attention"
+    return "Critical"
+  }
 
   return (
     <Card className="h-full">
@@ -51,7 +58,7 @@ export function HealthRing() {
               duration={1400}
               className="font-serif text-4xl font-semibold text-foreground"
             />
-            <span className="text-xs font-medium text-success">Excellent</span>
+            <span className="text-xs font-medium text-success">{getStatusLabel(score)}</span>
           </div>
         </div>
 

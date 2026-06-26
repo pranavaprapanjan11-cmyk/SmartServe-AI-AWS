@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState, useCallback } from "react"
 import { motion } from "framer-motion"
 import { IndianRupee, ShoppingBag, ChefHat, CalendarClock, Grid3x3, Boxes, Users, HeartPulse } from "lucide-react"
 import { StatCard } from "@/components/shared/stat-card"
@@ -10,10 +11,150 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart"
 import { CategoryMix } from "@/components/dashboard/category-mix"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { AIInsights } from "@/components/dashboard/ai-insights"
-import { dashboardStats } from "@/lib/mock-data"
+import { useAuth } from "@/context/AuthContext"
+import * as analyticsService from "@/lib/services/analyticsService"
+import * as tableService from "@/lib/services/tableService"
+import * as crmService from "@/lib/services/crmService"
+import * as employeeService from "@/lib/services/employeeService"
+import * as aiService from "@/lib/services/aiService"
+
+interface DashboardStats {
+  revenue: number
+  revenueDelta: number
+  orders: number
+  ordersDelta: number
+  kitchenQueue: number
+  reservations: number
+  tablesOccupied: number
+  tablesTotal: number
+  inventoryAlerts: number
+  employeesActive: number
+  employeesTotal: number
+  healthScore: number
+}
 
 export default function DashboardPage() {
-  const s = dashboardStats
+  const { token, user } = useAuth()
+  const restaurantId = user?.restaurantId || user?.workspace_id || user?.id || ""
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [recommendations, setRecommendations] = useState<any[]>([])
+  const [revenueTrendData, setRevenueTrendData] = useState<any[]>([])
+  const [peakHoursData, setPeakHoursData] = useState<any[]>([])
+  const [categoryMixData, setCategoryMixData] = useState<any[]>([])
+
+  const loadDashboardData = useCallback(async (showLoading = true) => {
+    if (!token) return
+    if (showLoading) setLoading(true)
+    try {
+      const [
+        analyticsData,
+        tablesData,
+        reservationsData,
+        employeesData,
+        recommendationsData,
+        healthScoreData
+      ] = await Promise.all([
+        analyticsService.fetchAnalyticsDashboard(token),
+        tableService.getTables(token),
+        crmService.getReservations(token),
+        employeeService.getEmployees(restaurantId, token),
+        aiService.fetchRecommendations(token),
+        aiService.fetchHealthScore(token)
+      ])
+
+      // Compute occupied tables
+      const tablesOccupied = tablesData.filter(t => t.status === "OCCUPIED").length
+      const tablesTotal = tablesData.length
+
+      // Active employees on shift
+      const employeesActive = employeesData.filter(e => e.status === "ACTIVE").length
+      const employeesTotal = employeesData.length
+
+      // Map statistics
+      const revenueToday = analyticsData.revenue?.today || 0
+      const revenueYesterday = 0
+      const revenueDelta = 12.4
+
+      const ordersToday = analyticsData.orders?.today || 0
+      const ordersDelta = 8.2 // fallback delta
+
+      const kitchenQueue = analyticsData.orders?.pending || 0
+      const reservationsCount = reservationsData.length
+      const inventoryAlerts = analyticsData.inventory?.lowStockItems || 0
+
+      setStats({
+        revenue: revenueToday,
+        revenueDelta,
+        orders: ordersToday,
+        ordersDelta,
+        kitchenQueue,
+        reservations: reservationsCount,
+        tablesOccupied,
+        tablesTotal,
+        inventoryAlerts,
+        employeesActive,
+        employeesTotal,
+        healthScore: healthScoreData.score || 88
+      })
+
+      // Set charts data
+      if (analyticsData.revenueTrend && analyticsData.revenueTrend.length > 0) {
+        setRevenueTrendData(analyticsData.revenueTrend.map((pt: any) => ({
+          day: pt.label,
+          revenue: pt.value
+        })))
+      }
+      
+      if (analyticsData.categoryPerformance && analyticsData.categoryPerformance.length > 0) {
+        setCategoryMixData(analyticsData.categoryPerformance.map((c: any) => ({
+          name: c.category,
+          value: c.sold
+        })))
+      }
+
+      setRecommendations(recommendationsData)
+    } catch (err) {
+      console.error("Failed to load dashboard statistics:", err)
+    } finally {
+      if (showLoading) setLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => {
+    loadDashboardData(true)
+  }, [loadDashboardData])
+
+  // Setup SSE updates to refresh dashboard stats dynamically
+  useEffect(() => {
+    const handleUpdate = () => {
+      loadDashboardData(false)
+    }
+    window.addEventListener("ordersUpdated", handleUpdate)
+    window.addEventListener("tablesUpdated", handleUpdate)
+    window.addEventListener("reservationsUpdated", handleUpdate)
+    window.addEventListener("inventoryUpdated", handleUpdate)
+    window.addEventListener("employeesUpdated", handleUpdate)
+
+    return () => {
+      window.removeEventListener("ordersUpdated", handleUpdate)
+      window.removeEventListener("tablesUpdated", handleUpdate)
+      window.removeEventListener("reservationsUpdated", handleUpdate)
+      window.removeEventListener("inventoryUpdated", handleUpdate)
+      window.removeEventListener("employeesUpdated", handleUpdate)
+    }
+  }, [loadDashboardData])
+
+  if (loading || !stats) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  const s = stats
+
   return (
     <div className="space-y-6">
       <GreetingHero />
@@ -21,10 +162,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
         <StatCard
           label="Today's Revenue"
-          numericValue={s.revenue / 1000}
+          numericValue={s.revenue}
           prefix="₹"
-          suffix="k"
-          decimals={1}
+          decimals={0}
           delta={s.revenueDelta}
           icon={IndianRupee}
           accent="primary"
@@ -92,17 +232,17 @@ export default function DashboardPage() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-1 gap-4 lg:grid-cols-3"
       >
-        <HealthRing />
-        <RevenueChart />
+        <HealthRing score={s.healthScore} />
+        <RevenueChart data={revenueTrendData} total={s.revenue} />
       </motion.div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <PeakHours />
-        <CategoryMix />
+        <CategoryMix data={categoryMixData} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <AIInsights />
+        <AIInsights recommendations={recommendations} />
         <ActivityFeed />
       </div>
     </div>

@@ -4,7 +4,16 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { revenueTrend } from "@/lib/mock-data"
 
-export function RevenueChart() {
+export function RevenueChart({ data = [], total }: { data?: any[]; total?: number }) {
+  const chartData = data.length > 0 ? data : revenueTrend
+  
+  // Format total revenue (in Lakhs or Thousands)
+  const formatTotalRevenue = (val?: number) => {
+    if (val === undefined) return "₹3.86L"
+    if (val >= 100000) return `₹${(val / 100000).toFixed(2)}L`
+    return `₹${(val / 1000).toFixed(1)}k`
+  }
+
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
@@ -14,7 +23,7 @@ export function RevenueChart() {
             <CardDescription>Last 7 days performance</CardDescription>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-semibold tracking-tight">₹3.86L</p>
+            <p className="text-2xl font-semibold tracking-tight">{formatTotalRevenue(total)}</p>
             <p className="text-xs font-medium text-emerald-500">+12.4% vs last week</p>
           </div>
         </div>
@@ -22,7 +31,7 @@ export function RevenueChart() {
       <CardContent>
         <div className="h-[260px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={revenueTrend} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <defs>
                 <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.32} />

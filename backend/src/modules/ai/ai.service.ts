@@ -401,6 +401,11 @@ export async function getLiveContext(userId: string, role: string): Promise<any>
   };
 }
 
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize the Google Gen AI client
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+
 export async function getChatResponse(
   userId: string,
   role: string,
@@ -408,32 +413,100 @@ export async function getChatResponse(
   history: any[]
 ): Promise<string> {
   const context = await getLiveContext(userId, role);
-  return `🤖 **[SmartServe-AI Assistant - Offline Mode]**
+  
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('YOUR_')) {
+    return `🤖 **[SmartServe-AI Co-pilot - Offline Mode]**
+    
+Live context retrieved:
+- Active Orders: **${context.orders?.pending?.length || 0}**
+- Low Stock Items: **${context.inventory?.low_stock?.length || 0}**
+- Tables Occupied: **${context.active_tables?.length || 0}**
 
-Gemini integrations are currently disconnected as requested for Phase 3.
+*Please configure a valid GEMINI_API_KEY for live co-pilot chats.*`;
+  }
 
-**Live Context Received:**
-- User Role: **${role}**
-- Active Orders: **${context.active_orders?.length || 0}**
-- Low Stock Items: **${context.low_stock_items?.length || 0}**
-- Tables Occupied: **${context.active_tables?.filter((t: any) => t.status === 'OCCUPIED').length || 0}**
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // Structure chat history for Gemini API
+    const contents = history.map(item => ({
+      role: item.role === 'user' ? 'user' : 'model',
+      parts: [{ text: item.content || item.text || '' }]
+    }));
+    
+    // Append the new message
+    contents.push({
+      role: 'user',
+      parts: [{ text: message }]
+    });
 
-*Offline placeholder mode verified successfully.*`;
+    const systemInstruction = `You are SmartServe-AI, an intelligent restaurant management co-pilot.
+You have access to the following live restaurant data to answer queries accurately:
+- Current Date: ${context.current_date}
+- Current Time: ${context.current_time}
+- Today's Revenue: ₹${context.dashboard_metrics?.today_revenue || 0}
+- Active Tables Count: ${context.dashboard_metrics?.occupied_tables_count || 0}
+- Pending Orders: ${JSON.stringify(context.orders?.pending || [])}
+- Kitchen Queue: ${JSON.stringify(context.orders?.kitchen_queue || [])}
+- Low Stock items: ${JSON.stringify(context.inventory?.low_stock || [])}
+- Employees Roster: ${JSON.stringify(context.employees || [])}
+
+Answer briefly, professionally, and use clean markdown formatting. Keep the tone helpful, efficient, and operational.`;
+
+    const result = await model.generateContent({
+      contents,
+      generationConfig: {
+        maxOutputTokens: 500,
+      },
+      systemInstruction: {
+        parts: [{ text: systemInstruction }],
+        role: 'system'
+      }
+    });
+
+    return result.response.text();
+  } catch (err: any) {
+    console.error('Gemini Chat Error:', err);
+    return `🤖 **[SmartServe-AI Co-pilot]** Sorry, I encountered an error communicating with Gemini: ${err.message || err}`;
+  }
 }
 
 export async function getAiSummary(userId: string, role: string): Promise<string> {
   const context = await getLiveContext(userId, role);
-  return `# SmartServe-AI Daily Business Report (Offline Mode)
-
-Gemini summary generation is currently offline/disconnected as requested for Phase 3.
-
-## Live Context Summary:
+  
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY.startsWith('YOUR_')) {
+    return `# Daily Business Report (Offline Mode)
+    
 - **Revenue Today**: ₹${context.revenue?.today || 0}
-- **Orders Today**: ${context.orders?.today || 0}
-- **Low Stock Alerts**: ${context.inventory?.lowStockItems || 0}
-- **Table Occupancy**: ${context.active_tables?.filter((t: any) => t.status === 'OCCUPIED').length || 0}/${context.active_tables?.length || 0} tables occupied
+- **Orders Today**: ${context.orders?.today_orders_count || 0}
+- **Low Stock Count**: ${context.inventory?.low_stock?.length || 0}
+- **Tables Occupied**: ${context.active_tables?.length || 0}
 
-*Placeholder report compiled successfully in offline mode.*`;
+*Configure a valid GEMINI_API_KEY to generate live AI operations analysis.*`;
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    const prompt = `You are a senior restaurant consultant. Generate a brief daily business summary report based on the following live operating data:
+- Today's Revenue: ₹${context.revenue?.today || 0}
+- Today's Orders count: ${context.orders?.today_orders_count || 0}
+- Low Stock warnings: ${JSON.stringify(context.inventory?.low_stock || [])}
+- Seated Tables count: ${context.active_tables?.length || 0}
+- Recent orders detail: ${JSON.stringify(context.orders?.recent || [])}
+
+Requirements:
+1. Provide a concise business review.
+2. Outline critical warnings (e.g. low ingredients, long order queues).
+3. Offer 2 actionable operational suggestions.
+4. Keep under 300 words. Use clean markdown formatting.`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (err: any) {
+    console.error('Gemini Summary Error:', err);
+    return `# Daily Operations Report\n\nFailed to compile AI summary: ${err.message || err}`;
+  }
 }
 
 export async function getAiReport(userId: string, role: string): Promise<any> {
@@ -446,4 +519,5 @@ export async function getAiReport(userId: string, role: string): Promise<any> {
     summary: summaryMarkdown
   };
 }
+
 
