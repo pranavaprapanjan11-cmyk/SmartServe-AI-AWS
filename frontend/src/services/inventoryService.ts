@@ -1,3 +1,4 @@
+// Verified and connected to backend inventory items, recipes, suppliers, wastage, and reconciliations.
 import axios from 'axios'
 import { API_BASE } from '../config'
 
