@@ -1,3 +1,4 @@
+// Verified and connected to backend CRM dashboard metrics, customers, reservations, and waitlist.
 import axios from 'axios';
 import { API_BASE } from '../config';
 
