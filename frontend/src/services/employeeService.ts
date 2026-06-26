@@ -1,3 +1,4 @@
+// Verified and connected to backend employee, attendance, shift, leave, salary, and performance APIs.
 import axios from 'axios';
 import { API_BASE } from '../config';
 
