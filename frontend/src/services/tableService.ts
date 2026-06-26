@@ -1,5 +1,5 @@
 // File: frontend/src/services/tableService.ts
-// API service for restaurant table operations
+// API service for restaurant table operations. Connected to backend Express Table service.
 
 import axios from 'axios';
 import { API_BASE } from '../config';
