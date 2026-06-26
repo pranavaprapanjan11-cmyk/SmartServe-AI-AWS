@@ -271,8 +271,11 @@ const KitchenDashboard: React.FC = () => {
     window.addEventListener('order_completed', handleOrderCompleted);
     window.addEventListener('order_cancelled', handleOrderCancelled);
 
-    const pollInterval = sseActive ? 10000 : 2000;
-    const iv = setInterval(() => load(false), pollInterval);
+    let iv: any = null;
+    if (!sseActive) {
+      console.log('SSE is inactive, enabling 3s fallback polling for kitchen...');
+      iv = setInterval(() => load(false), 3000);
+    }
 
     return () => {
       window.removeEventListener('ordersUpdated', onUpdate);
@@ -280,7 +283,7 @@ const KitchenDashboard: React.FC = () => {
       window.removeEventListener('order_updated', handleOrderUpdated);
       window.removeEventListener('order_completed', handleOrderCompleted);
       window.removeEventListener('order_cancelled', handleOrderCancelled);
-      clearInterval(iv);
+      if (iv) clearInterval(iv);
     };
   }, [load, sseActive, user]);
 
