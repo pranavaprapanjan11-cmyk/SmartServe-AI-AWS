@@ -37,6 +37,13 @@ function ChefRobot({ small }: { small?: boolean }) {
       transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
       className={cn("relative", small ? "h-7 w-7" : "h-9 w-9")}
     >
+      {/* Waving hand */}
+      <motion.span
+        className="absolute -left-1 top-2.5 z-20 block h-1.5 w-1.5 rounded-full bg-background/95"
+        style={{ transformOrigin: "bottom right" }}
+        animate={{ rotate: [0, 28, -8, 24, 0] }}
+        transition={{ duration: 1, repeat: Infinity, repeatDelay: 3.4, ease: "easeInOut" }}
+      />
       {/* Chef hat */}
       <div className="absolute left-1/2 top-0 h-2 w-5 -translate-x-1/2 rounded-full bg-background/95" />
       <div className="absolute left-1/2 top-1 h-1.5 w-3 -translate-x-1/2 rounded-sm bg-background/95" />
@@ -60,6 +67,7 @@ function ChefRobot({ small }: { small?: boolean }) {
 export function AIAssistant() {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState("")
+  const [showGreeting, setShowGreeting] = useState(false)
   const [messages, setMessages] = useState<Msg[]>([
     { role: "ai", text: "Hi, I'm Chef — your AI restaurant co-pilot. Ask me anything about tonight's service." },
   ])
@@ -68,6 +76,17 @@ export function AIAssistant() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, open])
+
+  // Chef peeks in with a greeting shortly after load, then tucks away.
+  useEffect(() => {
+    if (open) return
+    const show = setTimeout(() => setShowGreeting(true), 2600)
+    const hide = setTimeout(() => setShowGreeting(false), 9000)
+    return () => {
+      clearTimeout(show)
+      clearTimeout(hide)
+    }
+  }, [open])
 
   function send(text: string) {
     const value = text.trim()
@@ -154,9 +173,27 @@ export function AIAssistant() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {showGreeting && !open && (
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
+            className="fixed bottom-7 right-24 z-50 max-w-[200px] rounded-2xl rounded-br-sm border border-border bg-card px-3.5 py-2.5 text-sm shadow-soft"
+          >
+            <p className="font-medium text-foreground">Need a hand tonight?</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Ask me about sales, stock, or prep.</p>
+            <span className="absolute -bottom-1.5 right-4 h-3 w-3 rotate-45 border-b border-r border-border bg-card" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <motion.button
         onClick={() => setOpen((o) => !o)}
         whileTap={{ scale: 0.92 }}
+        animate={open ? { x: 0 } : { x: [0, -2, 0, 2, 0] }}
+        transition={open ? {} : { duration: 6, repeat: Infinity, ease: "easeInOut" }}
         className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/30"
         aria-label="Open Chef AI assistant"
       >

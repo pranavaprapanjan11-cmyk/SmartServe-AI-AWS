@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { AnimatedNumber } from "@/components/shared/animated-number"
 import { cn } from "@/lib/utils"
 
 export type StatAccent = "primary" | "copper" | "emerald" | "sky" | "orange" | "amber" | "info" | "warning"
@@ -10,6 +11,10 @@ export type StatAccent = "primary" | "copper" | "emerald" | "sky" | "orange" | "
 export function StatCard({
   label,
   value,
+  numericValue,
+  prefix,
+  suffix,
+  decimals = 0,
   delta,
   icon: Icon,
   hint,
@@ -17,7 +22,12 @@ export function StatCard({
   index = 0,
 }: {
   label: string
-  value: string | number
+  value?: string | number
+  /** When provided, the value animates with a count-up effect. */
+  numericValue?: number
+  prefix?: string
+  suffix?: string
+  decimals?: number
   delta?: number
   icon: LucideIcon
   hint?: string
@@ -34,17 +44,33 @@ export function StatCard({
     info: "bg-sky-500/10 text-sky-500",
     warning: "bg-amber-500/10 text-amber-500",
   }
+  const glowMap: Record<StatAccent, string> = {
+    primary: "group-hover:shadow-[0_0_28px_-10px_hsl(var(--primary)/0.5)]",
+    copper: "group-hover:shadow-[0_0_28px_-10px_hsl(var(--copper)/0.5)]",
+    emerald: "group-hover:shadow-[0_0_28px_-10px_rgba(16,185,129,0.5)]",
+    sky: "group-hover:shadow-[0_0_28px_-10px_rgba(14,165,233,0.5)]",
+    orange: "group-hover:shadow-[0_0_28px_-10px_rgba(249,115,22,0.5)]",
+    amber: "group-hover:shadow-[0_0_28px_-10px_rgba(245,158,11,0.5)]",
+    info: "group-hover:shadow-[0_0_28px_-10px_rgba(14,165,233,0.5)]",
+    warning: "group-hover:shadow-[0_0_28px_-10px_rgba(245,158,11,0.5)]",
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      whileHover={{ y: -3 }}
+      transition={{ delay: index * 0.05, type: "spring", stiffness: 260, damping: 22 }}
+      whileHover={{ y: -4 }}
+      className="group h-full"
     >
-      <Card className="p-5 transition-shadow hover:shadow-md">
+      <Card className={cn("h-full p-5 transition-all duration-300", glowMap[accent])}>
         <div className="flex items-start justify-between">
-          <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", accentMap[accent])}>
+          <div
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110",
+              accentMap[accent],
+            )}
+          >
             <Icon className="h-5 w-5" />
           </div>
           {typeof delta === "number" && (
@@ -59,7 +85,13 @@ export function StatCard({
             </span>
           )}
         </div>
-        <p className="mt-4 font-serif text-2xl font-semibold tracking-tight">{value}</p>
+        <p className="mt-4 font-serif text-2xl font-semibold tracking-tight">
+          {typeof numericValue === "number" ? (
+            <AnimatedNumber value={numericValue} prefix={prefix} suffix={suffix} decimals={decimals} />
+          ) : (
+            value
+          )}
+        </p>
         <p className="mt-0.5 text-sm text-muted-foreground">{label}</p>
         {hint && <p className="mt-1 text-xs text-muted-foreground/80">{hint}</p>}
       </Card>

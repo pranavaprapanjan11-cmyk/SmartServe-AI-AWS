@@ -7,6 +7,7 @@ import { ChefHat, ChevronsUpDown, Check } from "lucide-react"
 import { navSections } from "@/lib/navigation"
 import { restaurants } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
+import { AnimatedNumber } from "@/components/shared/animated-number"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -25,8 +26,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-border px-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sidebar-accent text-background">
-          <ChefHat className="h-5 w-5" />
+        <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-sidebar-accent text-background">
+          <span className="absolute inset-0 rounded-xl bg-sidebar-accent/40 blur-md animate-breathe" aria-hidden />
+          <ChefHat className="relative h-5 w-5" />
         </div>
         <div className="leading-tight">
           <p className="font-serif text-base font-semibold text-background">SmartServe</p>
@@ -93,7 +95,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                         transition={{ type: "spring", stiffness: 380, damping: 32 }}
                       />
                     )}
-                    <item.icon className="relative z-10 h-[18px] w-[18px] shrink-0" />
+                    <item.icon className="relative z-10 h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6" />
                     <span className="relative z-10 flex-1 font-medium">{item.title}</span>
                     {item.badge && (
                       <Badge
@@ -115,8 +117,20 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <div className="rounded-xl bg-gradient-to-br from-sidebar-accent/20 to-copper/10 p-3.5">
           <p className="text-xs font-semibold text-background">Restaurant Health</p>
           <div className="mt-2 flex items-end gap-2">
-            <span className="font-serif text-2xl font-semibold text-sidebar-accent">94</span>
+            <AnimatedNumber
+              value={94}
+              duration={1500}
+              className="font-serif text-2xl font-semibold text-sidebar-accent"
+            />
             <span className="pb-1 text-[11px] text-sidebar-foreground/60">Excellent</span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-sidebar-border/60">
+            <motion.div
+              className="h-full rounded-full bg-sidebar-accent"
+              initial={{ width: 0 }}
+              animate={{ width: "94%" }}
+              transition={{ duration: 1.3, ease: "easeOut" }}
+            />
           </div>
         </div>
       </div>

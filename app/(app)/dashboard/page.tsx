@@ -2,95 +2,102 @@
 
 import { motion } from "framer-motion"
 import { IndianRupee, ShoppingBag, ChefHat, CalendarClock, Grid3x3, Boxes, Users, HeartPulse } from "lucide-react"
-import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
+import { GreetingHero } from "@/components/dashboard/greeting-hero"
+import { HealthRing } from "@/components/dashboard/health-ring"
+import { PeakHours } from "@/components/dashboard/peak-hours"
 import { RevenueChart } from "@/components/dashboard/revenue-chart"
 import { CategoryMix } from "@/components/dashboard/category-mix"
 import { ActivityFeed } from "@/components/dashboard/activity-feed"
 import { AIInsights } from "@/components/dashboard/ai-insights"
-import { Button } from "@/components/ui/button"
 import { dashboardStats } from "@/lib/mock-data"
-
-const container = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
-}
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0 },
-}
 
 export default function DashboardPage() {
   const s = dashboardStats
   return (
     <div className="space-y-6">
-      <PageHeader title="Command Center" description="Saffron & Sage · Live operations overview">
-        <Button variant="outline">Export Report</Button>
-        <Button>New Order</Button>
-      </PageHeader>
+      <GreetingHero />
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+        <StatCard
+          label="Today's Revenue"
+          numericValue={s.revenue / 1000}
+          prefix="₹"
+          suffix="k"
+          decimals={1}
+          delta={s.revenueDelta}
+          icon={IndianRupee}
+          accent="primary"
+          index={0}
+        />
+        <StatCard
+          label="Orders"
+          numericValue={s.orders}
+          delta={s.ordersDelta}
+          icon={ShoppingBag}
+          accent="sky"
+          index={1}
+        />
+        <StatCard
+          label="Kitchen Queue"
+          numericValue={s.kitchenQueue}
+          icon={ChefHat}
+          accent="orange"
+          hint="active tickets"
+          index={2}
+        />
+        <StatCard
+          label="Reservations"
+          numericValue={s.reservations}
+          icon={CalendarClock}
+          accent="sky"
+          hint="booked today"
+          index={3}
+        />
+        <StatCard
+          label="Tables Occupied"
+          value={`${s.tablesOccupied}/${s.tablesTotal}`}
+          icon={Grid3x3}
+          accent="emerald"
+          index={4}
+        />
+        <StatCard
+          label="Inventory Alerts"
+          numericValue={s.inventoryAlerts}
+          icon={Boxes}
+          accent="amber"
+          hint="needs attention"
+          index={5}
+        />
+        <StatCard
+          label="Staff On Shift"
+          value={`${s.employeesActive}/${s.employeesTotal}`}
+          icon={Users}
+          accent="primary"
+          index={6}
+        />
+        <StatCard
+          label="Health Score"
+          numericValue={s.healthScore}
+          suffix="%"
+          icon={HeartPulse}
+          accent="emerald"
+          index={7}
+        />
+      </div>
 
       <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 gap-4 lg:grid-cols-3"
       >
-        <motion.div variants={item}>
-          <StatCard
-            label="Today's Revenue"
-            value={`₹${(s.revenue / 1000).toFixed(1)}k`}
-            delta={s.revenueDelta}
-            icon={IndianRupee}
-            accent="primary"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="Orders" value={s.orders} delta={s.ordersDelta} icon={ShoppingBag} accent="sky" />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="Kitchen Queue" value={s.kitchenQueue} icon={ChefHat} accent="orange" hint="active tickets" />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            label="Reservations"
-            value={s.reservations}
-            icon={CalendarClock}
-            accent="sky"
-            hint="booked today"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            label="Tables Occupied"
-            value={`${s.tablesOccupied}/${s.tablesTotal}`}
-            icon={Grid3x3}
-            accent="emerald"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            label="Inventory Alerts"
-            value={s.inventoryAlerts}
-            icon={Boxes}
-            accent="amber"
-            hint="needs attention"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard
-            label="Staff On Shift"
-            value={`${s.employeesActive}/${s.employeesTotal}`}
-            icon={Users}
-            accent="primary"
-          />
-        </motion.div>
-        <motion.div variants={item}>
-          <StatCard label="Health Score" value={`${s.healthScore}%`} icon={HeartPulse} accent="emerald" />
-        </motion.div>
+        <HealthRing />
+        <RevenueChart />
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <RevenueChart />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <PeakHours />
         <CategoryMix />
       </div>
 

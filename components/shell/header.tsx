@@ -69,9 +69,18 @@ export function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-              <Bell className="h-5 w-5" />
+              <motion.span
+                animate={unread > 0 ? { rotate: [0, -12, 12, -8, 8, 0] } : {}}
+                transition={{ duration: 0.9, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
+                style={{ transformOrigin: "top center" }}
+              >
+                <Bell className="h-5 w-5" />
+              </motion.span>
               {unread > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-2 w-2 rounded-full bg-copper ring-2 ring-background" />
+                <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-copper opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-copper ring-2 ring-background" />
+                </span>
               )}
             </Button>
           </DropdownMenuTrigger>
