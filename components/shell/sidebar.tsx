@@ -8,6 +8,7 @@ import { navSections } from "@/lib/navigation"
 import { restaurants } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 import { AnimatedNumber } from "@/components/shared/animated-number"
+import { LivePulse } from "@/components/shared/live-pulse"
 import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
@@ -115,23 +116,25 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="border-t border-sidebar-border p-3">
         <div className="rounded-xl bg-gradient-to-br from-sidebar-accent/20 to-copper/10 p-3.5">
-          <p className="text-xs font-semibold text-background">Restaurant Health</p>
-          <div className="mt-2 flex items-end gap-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-background">Restaurant Pulse</p>
+            <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-accent">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sidebar-accent opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-sidebar-accent" />
+              </span>
+              Live
+            </span>
+          </div>
+          <div className="mt-1 flex items-end gap-2">
             <AnimatedNumber
               value={94}
               duration={1500}
               className="font-serif text-2xl font-semibold text-sidebar-accent"
             />
-            <span className="pb-1 text-[11px] text-sidebar-foreground/60">Excellent</span>
+            <span className="pb-1 text-[11px] text-sidebar-foreground/60">Excellent · all systems nominal</span>
           </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-sidebar-border/60">
-            <motion.div
-              className="h-full rounded-full bg-sidebar-accent"
-              initial={{ width: 0 }}
-              animate={{ width: "94%" }}
-              transition={{ duration: 1.3, ease: "easeOut" }}
-            />
-          </div>
+          <LivePulse className="mt-1.5 h-8 w-full text-sidebar-accent" />
         </div>
       </div>
     </div>

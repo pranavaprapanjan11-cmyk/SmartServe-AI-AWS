@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
+import { toast } from "sonner"
 import { Plus, Search, ClipboardList, Clock, IndianRupee, CheckCircle2 } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
+import { EmptyState } from "@/components/shared/empty-state"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -64,7 +66,15 @@ function OrderTicket({ order, index }: { order: Order; index: number }) {
             <Button variant="outline" size="sm" className="flex-1">
               Details
             </Button>
-            <Button size="sm" className="flex-1">
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() =>
+                order.status === "ready"
+                  ? toast.success(`Order #${order.id} served`, { description: `${order.table} · enjoy the meal!` })
+                  : toast(`Order #${order.id} advanced`, { description: `Now moving down the line.` })
+              }
+            >
               {order.status === "ready" ? "Mark Served" : "Advance"}
             </Button>
           </div>
@@ -98,7 +108,7 @@ export default function OrdersPage() {
         <Button variant="outline">
           <Search className="h-4 w-4" /> Find Order
         </Button>
-        <Button>
+        <Button onClick={() => toast.success("New order started", { description: "Ticket opened — add items to begin." })}>
           <Plus className="h-4 w-4" /> New Order
         </Button>
       </PageHeader>
@@ -138,12 +148,21 @@ export default function OrdersPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <ClipboardList className="h-10 w-10 text-muted-foreground/50" />
-            <p className="mt-3 text-sm text-muted-foreground">No orders match your filters.</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={ClipboardList}
+          title={query ? "No orders match your search" : `No ${filter === "all" ? "" : filter} orders right now`}
+          description={
+            query
+              ? "Try a different order number, table, or server name."
+              : "When new tickets come in, they'll appear here in real time. Start one to get going."
+          }
+          actionLabel="New order"
+          onAction={() => {
+            setFilter("all")
+            setQuery("")
+            toast.success("New order started", { description: "Ticket opened — add items to begin." })
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((order, i) => (
