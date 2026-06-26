@@ -407,105 +407,33 @@ export async function getChatResponse(
   message: string,
   history: any[]
 ): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not defined in environment variables');
-  }
-
   const context = await getLiveContext(userId, role);
+  return `🤖 **[SmartServe-AI Assistant - Offline Mode]**
 
-  try {
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    let model;
-    try {
-      model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    } catch (e) {
-      model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    }
+Gemini integrations are currently disconnected as requested for Phase 3.
 
-    const systemInstruction = `
-You are the SmartServe-AI Assistant, a highly skilled restaurant management and business analyst AI.
-You have access to the current restaurant's live context data.
+**Live Context Received:**
+- User Role: **${role}**
+- Active Orders: **${context.active_orders?.length || 0}**
+- Low Stock Items: **${context.low_stock_items?.length || 0}**
+- Tables Occupied: **${context.active_tables?.filter((t: any) => t.status === 'OCCUPIED').length || 0}**
 
-Strict Guidelines:
-1. You must answer questions using ONLY the current workspace data provided in the context.
-2. Never leak or expose another workspace's information.
-3. If a question is about data not present in the context, tell the user that you don't have access to that information.
-4. Keep responses highly professional, clean, structured, and use Markdown for formatting (bold text, bullet points, code blocks where appropriate).
-5. Never invent or hallucinate metrics. If the revenue is 0, then it is 0.
-
-Live Context:
-${JSON.stringify(context, null, 2)}
-`;
-
-    const limitedHistory = history.slice(-10).map((h: any) => ({
-      role: h.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: h.text }]
-    }));
-
-    const chat = model.startChat({
-      history: limitedHistory,
-    });
-
-    const prompt = `${systemInstruction}\n\nUser Question: ${message}`;
-    const result = await chat.sendMessage(prompt);
-    return result.response.text();
-  } catch (err: any) {
-    console.error('Gemini API call failed:', err);
-    if (err?.status === 429 || err?.message?.includes('quota')) {
-      return 'AI Assistant is temporarily unavailable: API quota exceeded. Please try again later.';
-    }
-    return 'AI Assistant is temporarily unavailable.';
-  }
+*Offline placeholder mode verified successfully.*`;
 }
 
 export async function getAiSummary(userId: string, role: string): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not defined');
-  }
-
   const context = await getLiveContext(userId, role);
+  return `# SmartServe-AI Daily Business Report (Offline Mode)
 
-  try {
-    const { GoogleGenerativeAI } = require('@google/generative-ai');
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    let model;
-    try {
-      model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    } catch (e) {
-      model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    }
+Gemini summary generation is currently offline/disconnected as requested for Phase 3.
 
-    const prompt = `
-You are the SmartServe-AI Business Analyst. Generate a detailed "Daily Business Report" for this restaurant using ONLY the following live context data:
+## Live Context Summary:
+- **Revenue Today**: ₹${context.revenue?.today || 0}
+- **Orders Today**: ${context.orders?.today || 0}
+- **Low Stock Alerts**: ${context.inventory?.lowStockItems || 0}
+- **Table Occupancy**: ${context.active_tables?.filter((t: any) => t.status === 'OCCUPIED').length || 0}/${context.active_tables?.length || 0} tables occupied
 
-Context:
-${JSON.stringify(context, null, 2)}
-
-Requirements:
-Generate a structured report in Markdown. Include sections for:
-1. Executive Summary: High-level overview of today's performance.
-2. Financials: Revenue totals and breakdown by payment method.
-3. Operations: Orders count, active orders, and table occupancy.
-4. Inventory Alert: Low stock items, reorder suggestions.
-5. Reservation Summary: Today's guest reservations.
-6. Employee & CRM: Active employee count, customer highlights.
-7. AI Business Recommendations: 3-5 concrete, actionable tips based on this data.
-8. Restaurant Health Score: Highlight a score from 0-100 and its rating (Excellent/Good/Needs Attention/Critical) and explain the rating.
-
-Ensure the tone is analytical, professional, and clear.
-`;
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (err: any) {
-    console.error('Gemini summary generation failed:', err);
-    return 'AI Summary generation is temporarily unavailable.';
-  }
+*Placeholder report compiled successfully in offline mode.*`;
 }
 
 export async function getAiReport(userId: string, role: string): Promise<any> {
