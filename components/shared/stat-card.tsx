@@ -5,6 +5,8 @@ import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
+export type StatAccent = "primary" | "copper" | "emerald" | "sky" | "orange" | "amber" | "info" | "warning"
+
 export function StatCard({
   label,
   value,
@@ -15,18 +17,22 @@ export function StatCard({
   index = 0,
 }: {
   label: string
-  value: string
+  value: string | number
   delta?: number
   icon: LucideIcon
   hint?: string
-  accent?: "primary" | "copper" | "info" | "warning"
+  accent?: StatAccent
   index?: number
 }) {
-  const accentMap = {
+  const accentMap: Record<StatAccent, string> = {
     primary: "bg-primary/10 text-primary",
     copper: "bg-copper/12 text-copper",
-    info: "bg-info/12 text-info",
-    warning: "bg-warning/15 text-warning",
+    emerald: "bg-emerald-500/10 text-emerald-500",
+    sky: "bg-sky-500/10 text-sky-500",
+    orange: "bg-orange-500/10 text-orange-500",
+    amber: "bg-amber-500/10 text-amber-500",
+    info: "bg-sky-500/10 text-sky-500",
+    warning: "bg-amber-500/10 text-amber-500",
   }
 
   return (
@@ -45,7 +51,7 @@ export function StatCard({
             <span
               className={cn(
                 "flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium",
-                delta >= 0 ? "bg-success/12 text-success" : "bg-destructive/12 text-destructive"
+                delta >= 0 ? "bg-emerald-500/12 text-emerald-500" : "bg-destructive/12 text-destructive",
               )}
             >
               {delta >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}

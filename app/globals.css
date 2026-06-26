@@ -50,6 +50,13 @@
 
     --radius: 0.75rem;
 
+    /* Chart palette */
+    --chart-1: 158 64% 30%;
+    --chart-2: 30 54% 48%;
+    --chart-3: 214 72% 46%;
+    --chart-4: 38 92% 48%;
+    --chart-5: 280 40% 50%;
+
     /* Sidebar - deep charcoal */
     --sidebar: 220 24% 12%;
     --sidebar-foreground: 220 14% 80%;
@@ -97,6 +104,12 @@
     --border: 220 16% 20%;
     --input: 220 16% 20%;
     --ring: 158 58% 44%;
+
+    --chart-1: 158 58% 44%;
+    --chart-2: 30 58% 54%;
+    --chart-3: 214 66% 58%;
+    --chart-4: 38 88% 56%;
+    --chart-5: 280 44% 62%;
 
     --sidebar: 220 28% 7%;
     --sidebar-foreground: 220 14% 78%;
