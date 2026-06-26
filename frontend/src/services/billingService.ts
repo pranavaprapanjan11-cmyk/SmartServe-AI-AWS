@@ -1,3 +1,4 @@
+// Verified and connected to backend billing engine, GST calculations, and payment splits.
 import axios from 'axios'
 import { PaymentMethodType } from '../types/foundation'
 import { API_BASE } from '../config'
