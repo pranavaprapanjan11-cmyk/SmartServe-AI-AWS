@@ -338,7 +338,7 @@ const KitchenDashboard: React.FC = () => {
             </span>
           )}
           <button
-            onClick={load}
+            onClick={() => load()}
             className="rounded-2xl bg-cyan-500/10 px-5 py-2.5 text-sm font-semibold text-cyan-200 ring-1 ring-cyan-400/20 hover:bg-cyan-500/15 transition-all active:scale-[0.97]"
           >
             Refresh

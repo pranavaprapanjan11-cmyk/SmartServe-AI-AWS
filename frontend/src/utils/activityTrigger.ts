@@ -9,7 +9,8 @@ export type ActivityType =
   | 'inventoryAlert'
   | 'analyticsCounter'
   | 'aiInsightsReveal'
-  | 'notificationsBadge';
+  | 'notificationsBadge'
+  | 'aiAssistantResponse';
 
 export interface ActivityData {
   type: ActivityType;

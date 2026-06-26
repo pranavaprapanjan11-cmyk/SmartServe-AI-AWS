@@ -44,18 +44,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const navigate = useNavigate();
 
   useEffect(() => {
-    const t = localStorage.getItem('auth_token');
-    const u = localStorage.getItem('auth_user');
-    if (t && u) {
-      setToken(t);
-      try {
-        const parsed = JSON.parse(u);
-        setUser({ ...parsed, role: normalizeRole(parsed.role) || parsed.role });
-      } catch (e) {
-        setUser(null);
+    const restoreSession = async () => {
+      const t = localStorage.getItem('auth_token');
+      if (t) {
+        try {
+          const data = await authService.fetchMe(t);
+          const normalizedUser = { ...data.user, role: normalizeRole(data.user.role) || data.user.role };
+          localStorage.setItem('auth_user', JSON.stringify(normalizedUser));
+          setToken(t);
+          setUser(normalizedUser);
+        } catch (e) {
+          console.error("Session restore failed, clearing auth details:", e);
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          setToken(null);
+          setUser(null);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    restoreSession();
   }, []);
 
   const login = async (email: string, password: string, workspaceCode?: string) => {
