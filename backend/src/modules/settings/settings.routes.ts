@@ -19,6 +19,6 @@ router.put('/restaurant', authorizeRoles(Role.OWNER, Role.SUPER_ADMIN), saveRest
 
 router.get('/printers', authorizeRoles(Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN), fetchPrinterSettings);
 router.post('/printers', authorizeRoles(Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN), createPrinterSetting);
-router.put('/printers/:id', authorizeRoles(Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN), saveRestaurantSettings);
+router.put('/printers/:id', authorizeRoles(Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN), savePrinterSettings);
 
 export default router;
