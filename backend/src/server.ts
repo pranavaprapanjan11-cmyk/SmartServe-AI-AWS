@@ -23,7 +23,13 @@ import crmRouter from './modules/crm/crm.routes';
 import workspaceRouter from './modules/workspace/workspace.routes';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://smartserve-ai-aws-five.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use('/api/uploads', express.static(path.join(process.cwd(), 'backend', 'uploads')));
 

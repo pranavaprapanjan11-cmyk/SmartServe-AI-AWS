@@ -1,5 +1,11 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://localhost:4000/api/:path*"
+    }
+  ]
 }

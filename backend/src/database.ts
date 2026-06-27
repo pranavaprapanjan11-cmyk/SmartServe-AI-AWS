@@ -1,48 +1,26 @@
 import 'dotenv/config';
 import { Pool as PGPool } from 'pg';
-import { Signer } from "@aws-sdk/rds-signer";
-
-const useAuroraIAM = process.env.USE_AURORA_IAM_AUTH === 'true';
-
-// AWS RDS Signer client configuration
-const signer = new Signer({
-  hostname: process.env.AURORA_ENDPOINT || "",
-  port: parseInt(process.env.AURORA_PORT || "5432"),
-  username: process.env.AURORA_USER || "postgres",
-  region: process.env.AWS_REGION || "us-east-1",
-  ...(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-    }
-  } : {})
-});
-
-if (useAuroraIAM) {
-  console.log(`[AURORA] Initializing Shared Pool with IAM Database Authentication on ${process.env.AURORA_ENDPOINT}:${process.env.AURORA_PORT}`);
-}
 
 export class Pool {
   private localPool: PGPool;
 
   constructor(config?: any) {
-    if (useAuroraIAM) {
+    if (config) {
+      this.localPool = new PGPool(config);
+    } else if (process.env.DATABASE_URL) {
       this.localPool = new PGPool({
-        host: process.env.AURORA_ENDPOINT,
-        port: parseInt(process.env.AURORA_PORT || "5432"),
-        database: process.env.AURORA_DB_NAME || "smartserve",
-        user: process.env.AURORA_USER || "postgres",
-        // Dynamic password generator returning the short-lived IAM token
-        password: () => signer.getAuthToken(),
-        ssl: {
-          rejectUnauthorized: false // AWS RDS requires SSL for IAM DB authentication
-        },
-        max: 20,
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 5000
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : undefined
       });
     } else {
-      this.localPool = new PGPool(config || { connectionString: process.env.DATABASE_URL });
+      this.localPool = new PGPool({
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5432'),
+        database: process.env.DB_NAME || 'smartserve',
+        user: process.env.DB_USER || 'postgres',
+        password: process.env.DB_PASSWORD || '',
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined
+      });
     }
   }
 
@@ -62,7 +40,9 @@ export class Pool {
     await this.localPool.end();
   }
 }
+
 export const pool = new Pool();
+
 export class AuroraClient {
   async query(sql: string, params?: any[]) {
     return { rows: [], rowCount: 0 };

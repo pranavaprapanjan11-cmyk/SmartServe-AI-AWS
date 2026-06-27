@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+dist
+.env.local
+.venv
+.venv-1
+backend/node_modules
+backend/dist
+backend/uploads
