@@ -2,6 +2,7 @@
 // Express server that mounts all module routes
 
 import 'dotenv/config';
+import { pool } from './database';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -74,7 +75,42 @@ app.use('/api/workspace', workspaceRouter);
 import { sseHandler } from './modules/workspace/workspace.sse';
 
 // Health check
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', async (_req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({
+      status: 'ok',
+      db: 'connected',
+      time: result.rows[0]
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message
+    });
+  }
+});
+
+// Aurora DB test verification endpoint
+app.get('/api/db-test', async (_req, res) => {
+  try {
+    const timeRes = await pool.query('SELECT NOW()');
+    const dbRes = await pool.query('SELECT current_database()');
+    const userRes = await pool.query('SELECT current_user');
+    res.json({
+      status: "connected",
+      database: "aurora",
+      dbName: dbRes.rows[0]?.current_database || "unknown",
+      user: userRes.rows[0]?.current_user || "unknown",
+      timestamp: timeRes.rows[0]?.now || new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: "failed",
+      error: error.message
+    });
+  }
+});
 
 // Workspace updates endpoint
 app.get('/api/workspace/updates', sseHandler);

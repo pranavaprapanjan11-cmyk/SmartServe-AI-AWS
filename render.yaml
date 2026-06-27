@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: smartserve-backend
+    runtime: node
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm run start
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: BCRYPT_SALT_ROUNDS
+        value: 10
+      - key: DATABASE_URL
+        sync: false
+      - key: USE_AURORA_IAM_AUTH
+        value: "false"
+      - key: AURORA_ENDPOINT
+        sync: false
+      - key: AURORA_PORT
+        value: "5432"
+      - key: AURORA_USER
+        value: "postgres"
+      - key: AURORA_DB_NAME
+        value: "smartserve"
+      - key: AWS_REGION
+        value: "us-east-1"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production

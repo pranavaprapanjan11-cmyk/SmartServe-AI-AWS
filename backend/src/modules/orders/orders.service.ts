@@ -1,7 +1,7 @@
 // File: backend/src/modules/orders/orders.service.ts
 // Service layer for order operations: database queries and transactions
 
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import {
   Order,
   OrderItem,
@@ -12,7 +12,7 @@ import * as inventoryService from '../inventory/inventory.service';
 import { logEvent } from '../ai-operations/aiOperations.service';
 import { OperationalEventType } from '../ai-operations/aiOperations.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 /**
  * Resolves the appropriate restaurant_id.

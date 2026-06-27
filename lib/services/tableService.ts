@@ -23,6 +23,9 @@ export interface RestaurantTable {
   shape?: string;
   position_x: number;
   position_y: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
   reserved_for?: string | null;
   reserved_phone?: string | null;
   reservation_time?: string | null;
@@ -38,6 +41,9 @@ export interface CreateTablePayload {
   shape?: string;
   position_x?: number;
   position_y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
 }
 
 export interface UpdateTablePayload {
@@ -48,6 +54,9 @@ export interface UpdateTablePayload {
   shape?: string;
   position_x?: number;
   position_y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
 }
 
 export interface ReservationPayload {
@@ -63,6 +72,9 @@ function normalizeTable(table: any): RestaurantTable {
     capacity: Number(table.capacity),
     position_x: Number(table.position_x || 0),
     position_y: Number(table.position_y || 0),
+    width: table.width ? Number(table.width) : 80,
+    height: table.height ? Number(table.height) : 80,
+    rotation: table.rotation ? Number(table.rotation) : 0,
   } as RestaurantTable;
 }
 

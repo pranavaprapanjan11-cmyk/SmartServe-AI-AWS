@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { Pool } from 'pg';
+import { Pool, pool } from '../../database';
 import { AuthRequest } from '../auth/rbac.middleware';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 async function generateUniqueWorkspaceCode(dbPool: Pool, workspaceName: string): Promise<string> {
   const base = workspaceName.replace(/[^A-Z]/gi, '').substring(0, 5).toUpperCase() || 'REST';

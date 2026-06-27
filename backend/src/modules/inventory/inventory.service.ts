@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import {
   InventoryItem,
   CreateInventoryItemPayload,
@@ -11,7 +11,7 @@ import {
   ForecastItem
 } from './inventory.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 async function resolveRestaurantId(userId: string, role: string): Promise<string> {
   if (role === 'RESTAURANT_OWNER' || role === 'OWNER' || role === 'SUPER_ADMIN') {
@@ -56,6 +56,45 @@ export async function getInventoryItemById(userId: string, role: string, id: str
 
 export async function createInventoryItem(userId: string, role: string, payload: CreateInventoryItemPayload): Promise<InventoryItem> {
   const restaurantId = await resolveRestaurantId(userId, role);
+
+  let categoryId = payload.category_id;
+  if (!categoryId) {
+    const catResult = await pool.query(
+      `SELECT id FROM inventory_categories WHERE restaurant_id = $1 ORDER BY name ASC LIMIT 1`,
+      [restaurantId]
+    );
+    if (catResult.rows.length > 0) {
+      categoryId = catResult.rows[0].id;
+    } else {
+      const newCatResult = await pool.query(
+        `INSERT INTO inventory_categories (restaurant_id, name, description)
+         VALUES ($1, $2, $3)
+         RETURNING id`,
+        [restaurantId, 'General', 'Default general inventory category']
+      );
+      categoryId = newCatResult.rows[0].id;
+    }
+  }
+
+  let supplierId = payload.supplier_id;
+  if (!supplierId) {
+    const supResult = await pool.query(
+      `SELECT id FROM suppliers WHERE restaurant_id = $1 ORDER BY name ASC LIMIT 1`,
+      [restaurantId]
+    );
+    if (supResult.rows.length > 0) {
+      supplierId = supResult.rows[0].id;
+    } else {
+      const newSupResult = await pool.query(
+        `INSERT INTO suppliers (restaurant_id, name, contact_name, phone)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id`,
+        [restaurantId, 'Default Supplier', 'Manager', '0000000000']
+      );
+      supplierId = newSupResult.rows[0].id;
+    }
+  }
+
   const { rows } = await pool.query(
     `INSERT INTO inventory_items (restaurant_id, name, description, unit, quantity_on_hand, reorder_threshold, category_id, supplier_id, expiry_date, batch_number, is_active)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -67,8 +106,8 @@ export async function createInventoryItem(userId: string, role: string, payload:
       payload.unit,
       payload.quantity_on_hand,
       payload.reorder_threshold,
-      payload.category_id || null,
-      payload.supplier_id || null,
+      categoryId,
+      supplierId,
       payload.expiry_date || null,
       payload.batch_number || null,
       payload.is_active ?? true,

@@ -2,11 +2,11 @@
 // Service layer for authentication: interacts with PostgreSQL and handles password hashing
 
 import bcrypt from 'bcrypt';
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { NewUserPayload, UserRecord } from './auth.types';
 
 // Configure PG pool using DATABASE_URL env var. Ensure this is set in production.
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS) || 10;
 

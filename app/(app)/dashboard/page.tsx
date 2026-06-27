@@ -147,8 +147,20 @@ export default function DashboardPage() {
 
   if (loading || !stats) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+      <div className="space-y-6 animate-pulse">
+        {/* GreetingHero Skeleton */}
+        <div className="h-44 rounded-2xl bg-muted/40 border border-border/40" />
+        {/* StatCards Skeletons */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-24 rounded-2xl bg-muted/30 border border-border/40" />
+          ))}
+        </div>
+        {/* Charts Skeletons */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="h-80 rounded-2xl bg-muted/20 border border-border/40 lg:col-span-1" />
+          <div className="h-80 rounded-2xl bg-muted/20 border border-border/40 lg:col-span-2" />
+        </div>
       </div>
     )
   }
@@ -157,7 +169,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <GreetingHero />
+      <GreetingHero stats={s} userName={user?.name} />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
         <StatCard

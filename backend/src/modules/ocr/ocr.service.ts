@@ -7,7 +7,10 @@ import { ExtractedItem, OCRParseResult } from './ocr.types';
 const uploadDir = path.join(process.cwd(), 'backend', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const pythonCmd = process.env.PYTHON_PATH || 'python';
-const pythonScript = path.join(process.cwd(), 'python', 'ocr_processor.py');
+let pythonScript = path.join(process.cwd(), 'python', 'ocr_processor.py');
+if (!fs.existsSync(pythonScript)) {
+  pythonScript = path.join(process.cwd(), 'backend', 'python', 'ocr_processor.py');
+}
 
 const PRICE_CHAR_MAP: Record<string, string> = {
   O: '0', o: '0', Q: '0', D: '0', B: '8', S: '5', s: '5', Z: '2', z: '2',
@@ -75,6 +78,7 @@ function runPythonOCR(filePath: string) {
       encoding: 'utf-8',
       env: { ...process.env, OCR_LANGS: 'en' },
       maxBuffer: 20 * 1024 * 1024,
+      timeout: 15000
     }
   );
 
@@ -308,6 +312,7 @@ export async function checkOCRHealth() {
       encoding: 'utf-8',
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       maxBuffer: 5 * 1024 * 1024,
+      timeout: 10000
     }
   );
 
@@ -399,11 +404,16 @@ export async function parseImageFile(filePath: string): Promise<OCRParseResult> 
     let resultText = '';
     let confidence = 0;
     try {
-      const tRes = await Tesseract.recognize(buffer, 'eng', { logger: () => {} });
+      const tRes = await Promise.race([
+        Tesseract.recognize(buffer, 'eng', { logger: () => {} }),
+        new Promise<any>((_, reject) =>
+          setTimeout(() => reject(new Error('Tesseract timeout')), 10000)
+        )
+      ]);
       resultText = tRes?.data?.text || '';
       confidence = (tRes?.data?.confidence || 0) / 100;
     } catch (err) {
-      // ignore
+      console.error('Tesseract fallback failed or timed out:', err);
     }
     const result = parseText(resultText);
     result.confidence = confidence;

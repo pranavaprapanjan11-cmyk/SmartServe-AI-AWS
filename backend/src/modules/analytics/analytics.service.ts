@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { getRestaurantId } from '../orders/orders.service';
 import {
   AnalyticsDashboard,
@@ -8,7 +8,7 @@ import {
   MenuItemMetrics,
 } from './analytics.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 function safeNumber(value: any): number {
   return value === null || value === undefined ? 0 : Number(value);

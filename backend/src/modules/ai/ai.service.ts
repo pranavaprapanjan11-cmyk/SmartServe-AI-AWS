@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { getRestaurantId } from '../orders/orders.service';
 import {
   HealthScoreResponse,
@@ -8,7 +8,7 @@ import {
   SalesForecast,
 } from './ai.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 function safeNumber(value: any): number {
   return value === null || value === undefined ? 0 : Number(value);
@@ -241,7 +241,7 @@ export async function getRecommendations(userId: string, role: string): Promise<
 export async function getHealthScore(userId: string, role: string): Promise<HealthScoreResponse> {
   const restaurantId = await getRestaurantId(userId, role);
 
-  const [salesForecast, ordersResult, inventoryResult, menuResult] = await Promise.all([
+  const [salesForecast, ordersResult, inventoryResult, prepTimeResult, employeeResult] = await Promise.all([
     getSalesForecast(userId, role),
     pool.query(
       `SELECT COUNT(*) AS total_orders FROM orders WHERE restaurant_id = $1 AND created_at >= CURRENT_DATE - INTERVAL '6 days'`,
@@ -252,9 +252,19 @@ export async function getHealthScore(userId: string, role: string): Promise<Heal
       [restaurantId]
     ),
     pool.query(
+      `SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))) / 60, 0) AS avg_prep_time
+       FROM orders
+       WHERE restaurant_id = $1
+         AND status IN ('READY', 'SERVED', 'PAID')
+         AND created_at >= CURRENT_DATE - INTERVAL '6 days'`,
+      [restaurantId]
+    ),
+    pool.query(
       `SELECT 
-         (SELECT COALESCE(COUNT(DISTINCT menu_item_id), 0) FROM order_items oi JOIN menu_items mi ON oi.menu_item_id = mi.id WHERE mi.restaurant_id = $1) AS items_with_sales,
-         (SELECT COALESCE(COUNT(*), 0) FROM menu_items WHERE restaurant_id = $1) AS total_items`,
+         COUNT(*) FILTER (WHERE status = 'ACTIVE') as active_count,
+         COUNT(*) as total_count
+       FROM employees
+       WHERE restaurant_id = $1`,
       [restaurantId]
     ),
   ]);
@@ -263,16 +273,39 @@ export async function getHealthScore(userId: string, role: string): Promise<Heal
   const inventoryRow = inventoryResult.rows[0] || { low_stock_items: 0, total_items: 0 };
   const lowStockItems = safeNumber(inventoryRow.low_stock_items);
   const totalInventoryItems = safeNumber(inventoryRow.total_items) || 1;
-  const menuRow = menuResult.rows[0] || { items_with_sales: 0, total_items: 0 };
-  const itemsWithSales = safeNumber(menuRow.items_with_sales);
-  const totalMenuItems = safeNumber(menuRow.total_items) || 1;
 
-  const revenueScore = clampScore((salesForecast.weeklyRevenue / 5000) * 30, 30);
-  const orderScore = clampScore((totalOrders / 50) * 25, 25);
-  const inventoryScore = clampScore(((totalInventoryItems - lowStockItems) / totalInventoryItems) * 25, 25);
-  const menuScore = clampScore((itemsWithSales / totalMenuItems) * 20, 20);
+  const avgPrepTime = parseFloat(prepTimeResult.rows[0]?.avg_prep_time || '0');
 
-  const totalScore = revenueScore + orderScore + inventoryScore + menuScore;
+  const activeStaff = Number(employeeResult.rows[0]?.active_count || 0);
+  const totalStaff = Number(employeeResult.rows[0]?.total_count || 0) || 1;
+
+  // 1. Revenue Score (25% weight) - Target ₹10,000 weekly revenue
+  const revenueScore = clampScore((salesForecast.weeklyRevenue / 10000) * 25, 25);
+
+  // 2. Orders Score (20% weight) - Target 100 orders weekly
+  const orderScore = clampScore((totalOrders / 100) * 20, 20);
+
+  // 3. Inventory Score (20% weight) - Higher ratio of stocked items
+  const inventoryRatio = (totalInventoryItems - lowStockItems) / totalInventoryItems;
+  const inventoryScore = clampScore(inventoryRatio * 20, 20);
+
+  // 4. Kitchen Speed Score (20% weight) - Under 15m is perfect (20 pts), 45m+ is 0 pts
+  let kitchenScore = 20;
+  if (avgPrepTime > 0) {
+    if (avgPrepTime <= 15) {
+      kitchenScore = 20;
+    } else if (avgPrepTime >= 45) {
+      kitchenScore = 0;
+    } else {
+      kitchenScore = clampScore((1 - (avgPrepTime - 15) / 30) * 20, 20);
+    }
+  }
+
+  // 5. Staff Attendance Score (15% weight) - Ratio of active staff on shift
+  const staffRatio = activeStaff / totalStaff;
+  const staffScore = clampScore(staffRatio * 15, 15);
+
+  const totalScore = revenueScore + orderScore + inventoryScore + kitchenScore + staffScore;
   const normalizedScore = Math.round(Math.max(0, Math.min(100, totalScore)));
   let status = 'Critical';
   if (normalizedScore >= 90) status = 'Excellent';

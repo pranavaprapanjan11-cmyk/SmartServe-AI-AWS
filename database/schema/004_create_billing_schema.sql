@@ -16,6 +16,12 @@ CREATE TABLE IF NOT EXISTS restaurant_settings (
   address TEXT,
   contact_number VARCHAR(50),
   gst_number VARCHAR(50),
+  branch_name VARCHAR(100),
+  email VARCHAR(100),
+  website VARCHAR(100),
+  upi_id VARCHAR(100),
+  tax_percent NUMERIC DEFAULT 18.0,
+  currency VARCHAR(10) DEFAULT 'INR',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   FOREIGN KEY (restaurant_id) REFERENCES users(id) ON DELETE CASCADE

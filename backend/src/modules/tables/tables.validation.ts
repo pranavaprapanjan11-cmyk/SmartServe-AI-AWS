@@ -6,9 +6,12 @@ export const createTableSchema = Joi.object({
   table_number: Joi.number().integer().min(1).required(),
   capacity: Joi.number().integer().min(1).required(),
   section: Joi.string().max(50).optional(),
-  shape: Joi.string().valid('rectangle', 'round', 'square').optional(),
+  shape: Joi.string().valid('square', 'round', 'booth', 'family', 'outdoor', 'bar', 'rectangle').optional(),
   position_x: Joi.number().integer().min(0).optional(),
   position_y: Joi.number().integer().min(0).optional(),
+  width: Joi.number().integer().min(1).optional(),
+  height: Joi.number().integer().min(1).optional(),
+  rotation: Joi.number().integer().min(0).max(360).optional(),
 });
 
 export const updateTableSchema = Joi.object({
@@ -16,9 +19,12 @@ export const updateTableSchema = Joi.object({
   status: Joi.string().valid(...Object.values(TableStatus)).optional(),
   current_order_id: Joi.string().uuid().allow(null).optional(),
   section: Joi.string().max(50).optional(),
-  shape: Joi.string().valid('rectangle', 'round', 'square').optional(),
+  shape: Joi.string().valid('square', 'round', 'booth', 'family', 'outdoor', 'bar', 'rectangle').optional(),
   position_x: Joi.number().integer().min(0).optional(),
   position_y: Joi.number().integer().min(0).optional(),
+  width: Joi.number().integer().min(1).optional(),
+  height: Joi.number().integer().min(1).optional(),
+  rotation: Joi.number().integer().min(0).max(360).optional(),
 });
 
 export const reservationSchema = Joi.object({

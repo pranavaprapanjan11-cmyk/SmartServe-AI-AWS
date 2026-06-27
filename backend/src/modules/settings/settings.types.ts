@@ -14,6 +14,12 @@ export interface RestaurantSettingsRecord {
   address?: string;
   contact_number?: string;
   gst_number?: string;
+  branch_name?: string;
+  email?: string;
+  website?: string;
+  upi_id?: string;
+  tax_percent?: number;
+  currency?: string;
   created_at: string;
   updated_at: string;
 }
@@ -41,6 +47,12 @@ export interface RestaurantSettingsPayload {
   address?: string;
   contact_number?: string;
   gst_number?: string;
+  branch_name?: string;
+  email?: string;
+  website?: string;
+  upi_id?: string;
+  tax_percent?: number;
+  currency?: string;
 }
 
 export interface PrinterSettingsPayload {

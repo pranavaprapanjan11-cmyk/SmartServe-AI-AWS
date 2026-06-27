@@ -1,7 +1,7 @@
 // File: backend/src/modules/menu/menu.service.ts
 // Service layer for menu operations: database queries and business logic
 
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import {
   MenuItem,
   MenuCategory,
@@ -13,7 +13,7 @@ import {
   MenuItemAnalytics,
 } from './menu.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 // ==================== MENU CATEGORIES ====================
 

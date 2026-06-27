@@ -7,6 +7,17 @@ import { AnimatedNumber } from "@/components/shared/animated-number"
 import { LivePulse } from "@/components/shared/live-pulse"
 import { currentUser, dashboardStats } from "@/lib/mock-data"
 
+interface GreetingHeroProps {
+  stats?: {
+    revenue: number
+    revenueDelta: number
+    orders: number
+    kitchenQueue: number
+    healthScore: number
+  } | null
+  userName?: string
+}
+
 function getGreeting(hour: number) {
   if (hour < 5) return { text: "Late night service", sub: "The kitchen never sleeps" }
   if (hour < 12) return { text: "Good morning", sub: "Let's open strong today" }
@@ -15,7 +26,7 @@ function getGreeting(hour: number) {
   return { text: "Good evening", sub: "Winding down a great night" }
 }
 
-export function GreetingHero() {
+export function GreetingHero({ stats, userName }: GreetingHeroProps) {
   const [now, setNow] = useState<Date | null>(null)
 
   useEffect(() => {
@@ -26,8 +37,16 @@ export function GreetingHero() {
 
   const hour = now?.getHours() ?? 19
   const greeting = getGreeting(hour)
-  const firstName = currentUser.name.split(" ")[0]
-  const s = dashboardStats
+  
+  // Use props if available, otherwise fall back to mock data
+  const nameToUse = userName || currentUser.name
+  const firstName = nameToUse.split(" ")[0]
+  
+  const revenue = stats?.revenue ?? dashboardStats.revenue
+  const revenueDelta = stats?.revenueDelta ?? dashboardStats.revenueDelta
+  const orders = stats?.orders ?? dashboardStats.orders
+  const kitchenQueue = stats?.kitchenQueue ?? dashboardStats.kitchenQueue
+  const healthScore = stats?.healthScore ?? dashboardStats.healthScore
 
   return (
     <motion.div
@@ -57,53 +76,53 @@ export function GreetingHero() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
             </span>
-            <span className="text-xs font-medium uppercase tracking-[0.18em] text-sidebar-foreground/70">
+            <span className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-300">
               Open · Live service
             </span>
           </div>
-          <h1 className="mt-3 font-serif text-3xl font-semibold text-background md:text-4xl">
+          <h1 className="mt-3 font-serif text-3xl font-semibold text-white md:text-4xl">
             {greeting.text}, {firstName}
           </h1>
-          <p className="mt-1 text-sm text-sidebar-foreground/70">
+          <p className="mt-1 text-sm text-zinc-300">
             {greeting.sub} at Saffron &amp; Sage.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-sidebar-accent/15 px-3 py-1 text-xs font-medium text-sidebar-accent">
               <Sparkles className="h-3.5 w-3.5" />
-              {s.orders} orders served today
+              {orders} orders served today
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-copper/15 px-3 py-1 text-xs font-medium text-copper">
               <Flame className="h-3.5 w-3.5" />
-              {s.kitchenQueue} on the line right now
+              {kitchenQueue} on the line right now
             </span>
           </div>
         </div>
 
         <div className="shrink-0">
-          <p className="text-xs uppercase tracking-[0.18em] text-sidebar-foreground/55">Today&apos;s Revenue</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-zinc-300">Today&apos;s Revenue</p>
           <div className="mt-1 flex items-end gap-3">
             <AnimatedNumber
-              value={s.revenue}
+              value={revenue}
               prefix="₹"
               duration={1600}
-              className="font-serif text-4xl font-semibold text-background md:text-5xl"
+              className="font-serif text-4xl font-semibold text-white md:text-5xl"
             />
             <span className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-success/20 px-2 py-0.5 text-xs font-semibold text-success">
-              <TrendingUp className="h-3 w-3" />+{s.revenueDelta}%
+              <TrendingUp className="h-3 w-3" />+{revenueDelta}%
             </span>
           </div>
-          <p className="mt-1 text-xs text-sidebar-foreground/60">vs. same time last week</p>
+          <p className="mt-1 text-xs text-zinc-400">vs. same time last week</p>
         </div>
       </div>
 
       {/* Live service trace — the restaurant's heartbeat across the bottom of the hero */}
       <div className="relative mt-6 flex items-center gap-3 border-t border-sidebar-border/60 pt-4">
-        <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/55">
+        <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.18em] text-zinc-400">
           Live service pulse
         </span>
         <LivePulse className="h-7 flex-1 text-sidebar-accent" speed={3.6} />
-        <span className="shrink-0 text-[11px] font-medium text-sidebar-accent">{s.healthScore}% healthy</span>
+        <span className="shrink-0 text-[11px] font-medium text-sidebar-accent">{healthScore}% healthy</span>
       </div>
     </motion.div>
   )

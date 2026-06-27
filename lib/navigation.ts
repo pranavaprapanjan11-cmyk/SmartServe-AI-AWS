@@ -12,6 +12,7 @@ import {
   Sparkles,
   Building2,
   FileText,
+  Utensils,
   type LucideIcon,
 } from "lucide-react"
 
@@ -32,6 +33,7 @@ export const navSections: NavSection[] = [
     label: "Operations",
     items: [
       { title: "Command Center", href: "/dashboard", icon: LayoutDashboard },
+      { title: "Menu Matrix", href: "/menu", icon: Utensils },
       { title: "Orders", href: "/orders", icon: ClipboardList, badge: "12" },
       { title: "Kitchen Display", href: "/kitchen", icon: ChefHat, badge: "5" },
       { title: "Billing / POS", href: "/billing", icon: Receipt },
@@ -57,7 +59,10 @@ export const navSections: NavSection[] = [
   },
   {
     label: "Workspace",
-    items: [{ title: "Workspace", href: "/workspace", icon: Building2 }],
+    items: [
+      { title: "Workspace", href: "/workspace", icon: Building2 },
+      { title: "Settings", href: "/settings", icon: UserCog }
+    ],
   },
 ]
 

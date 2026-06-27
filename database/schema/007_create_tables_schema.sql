@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS restaurant_tables (
   shape VARCHAR(20) DEFAULT 'square', -- rectangle, round, square
   position_x INTEGER DEFAULT 0,
   position_y INTEGER DEFAULT 0,
+  width INTEGER DEFAULT 80,
+  height INTEGER DEFAULT 80,
+  rotation INTEGER DEFAULT 0,
   reserved_for VARCHAR(100),
   reserved_phone VARCHAR(20),
   reservation_time TIMESTAMP WITH TIME ZONE,

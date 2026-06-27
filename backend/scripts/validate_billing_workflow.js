@@ -1,7 +1,5 @@
-const { Pool } = require('pg');
+const { pool } = require('./db_helper');
 require('dotenv').config();
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function run() {
   console.log('--- STARTING BILLING WORKFLOW AUDIT ---');
@@ -153,7 +151,7 @@ async function run() {
   // Complete Payment updates (simulate recordPayment service logic when fully paid)
   await pool.query("UPDATE invoices SET status = 'PAID', updated_at = NOW() WHERE id = $1", [invoice.id]);
   await pool.query("UPDATE orders SET status = 'PAID', updated_at = NOW() WHERE id = $1", [order.id]);
-  await pool.query("UPDATE restaurant_tables SET status = 'CLEANING', current_order_id = NULL WHERE id = $1", [table.id]);
+  await pool.query("UPDATE restaurant_tables SET status = 'AVAILABLE', current_order_id = NULL WHERE id = $1", [table.id]);
 
   console.log('Payment completed successfully. Checking database statuses:');
   const checkInvoicePay = await pool.query("SELECT status FROM invoices WHERE id = $1", [invoice.id]);

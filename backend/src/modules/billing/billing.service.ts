@@ -1,6 +1,6 @@
 // File: backend/src/modules/billing/billing.service.ts
 
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { getRestaurantId } from '../orders/orders.service';
 import { OrderStatus } from '../orders/orders.types';
 import {
@@ -15,7 +15,7 @@ import { logEvent } from '../ai-operations/aiOperations.service';
 import { OperationalEventType } from '../ai-operations/aiOperations.types';
 import { recordCustomerVisit } from '../crm/crm.service';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 function formatInvoiceNumber(date: Date, seq: number): string {
   const y = date.getFullYear();
@@ -142,6 +142,13 @@ export async function createInvoice(
     console.error('Failed to log INVOICE_GENERATED event:', e);
   }
 
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'billingUpdated', { invoiceId: invoiceRecord.id });
+  } catch (e) {
+    console.error('Failed to notify billingUpdated', e);
+  }
+
   return {
     ...invoiceRecord,
     subtotal: parseFloat(invoiceRecord.subtotal),
@@ -224,10 +231,10 @@ export async function recordPayment(
       [OrderStatus.PAID, invoice.order_id, restaurantId]
     );
     
-    // Automatically transition the table to CLEANING status and clear current_order_id
+    // Automatically transition the table to AVAILABLE status and clear current_order_id
     await pool.query(
       `UPDATE restaurant_tables 
-       SET status = 'CLEANING', current_order_id = NULL, updated_at = NOW() 
+       SET status = 'AVAILABLE', current_order_id = NULL, updated_at = NOW() 
        WHERE (current_order_id = $1 OR id = (SELECT table_id FROM orders WHERE id = $1))
          AND restaurant_id = $2`,
       [invoice.order_id, restaurantId]
@@ -271,12 +278,21 @@ export async function recordPayment(
         orderId: invoice.order_id,
         totalPaid
       });
-      await logEvent(restaurantId, OperationalEventType.TABLE_CLEANING, `Table associated with Order #${invoice.order_id.substring(0,8)} marked as CLEANING`, {
+      await logEvent(restaurantId, OperationalEventType.TABLE_AVAILABLE, `Table associated with Order #${invoice.order_id.substring(0,8)} marked as AVAILABLE`, {
         orderId: invoice.order_id
       });
     }
   } catch (e) {
     console.error('Failed to log payment events:', e);
+  }
+
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'billingUpdated', { invoiceId, status: newStatus });
+    notifyWorkspaceByRestaurantId(restaurantId, 'ordersUpdated', { orderId: invoice.order_id, status: OrderStatus.PAID });
+    notifyWorkspaceByRestaurantId(restaurantId, 'tablesUpdated');
+  } catch (e) {
+    console.error('Failed to send billing SSE notification:', e);
   }
 
   return {

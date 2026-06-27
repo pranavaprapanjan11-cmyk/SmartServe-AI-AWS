@@ -1,6 +1,6 @@
 // File: backend/src/modules/ai-operations/aiOperations.service.ts
 
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { OrderStatus } from '../orders/orders.types';
 import {
   OperationalEventType,
@@ -14,7 +14,7 @@ import {
 } from './aiOperations.types';
 import { getRestaurantId } from '../orders/orders.service';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 function safeNumber(value: any): number {
   return value === null || value === undefined ? 0 : Number(value);

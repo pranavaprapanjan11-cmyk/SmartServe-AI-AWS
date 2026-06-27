@@ -19,6 +19,9 @@ export interface RestaurantTable {
   shape?: string;
   position_x: number;
   position_y: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
   reserved_for?: string | null;
   reserved_phone?: string | null;
   reservation_time?: string | null;
@@ -34,6 +37,9 @@ export interface CreateTablePayload {
   shape?: string;
   position_x?: number;
   position_y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
 }
 
 export interface UpdateTablePayload {
@@ -44,6 +50,9 @@ export interface UpdateTablePayload {
   shape?: string;
   position_x?: number;
   position_y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
 }
 
 export interface ReservationPayload {

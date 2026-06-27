@@ -4,10 +4,10 @@ require('dotenv').config();
 const connectionString = process.env.DATABASE_URL;
 
 (async () => {
+  console.log('Resetting public schema in primary database (Aurora/PostgreSQL)...');
   const pool = new Pool({ connectionString });
   const client = await pool.connect();
   try {
-    console.log('Resetting public schema in Supabase...');
     await client.query('DROP SCHEMA public CASCADE');
     await client.query('CREATE SCHEMA public');
     await client.query('GRANT ALL ON SCHEMA public TO postgres');

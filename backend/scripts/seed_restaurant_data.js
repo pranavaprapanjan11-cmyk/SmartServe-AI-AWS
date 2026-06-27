@@ -1,8 +1,6 @@
 // File: backend/scripts/seed_restaurant_data.js
-const { Pool } = require('pg');
+const { pool } = require('./db_helper');
 require('dotenv').config();
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function seedForOwner(client, ownerId) {
   console.log(`Seeding data for Restaurant Owner ID: ${ownerId}`);

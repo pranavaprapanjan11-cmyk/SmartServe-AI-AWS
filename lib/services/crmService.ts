@@ -23,8 +23,13 @@ export async function getReservations(token: string): Promise<any[]> {
   return res.data;
 }
 
-export async function updateReservationStatus(id: string, status: string, token: string): Promise<any> {
-  const res = await axios.patch(`${API_BASE}/crm/reservations/${id}/status`, { status }, {
+export async function updateReservationStatus(
+  id: string,
+  payload: string | { status: string; requested_table?: string | null },
+  token: string
+): Promise<any> {
+  const body = typeof payload === 'string' ? { status: payload } : payload;
+  const res = await axios.patch(`${API_BASE}/crm/reservations/${id}/status`, body, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;
@@ -39,6 +44,13 @@ export async function getWaitlist(token: string): Promise<any[]> {
 
 export async function updateWaitlistStatus(id: string, status: string, token: string): Promise<any> {
   const res = await axios.patch(`${API_BASE}/crm/waitlist/${id}/status`, { status }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+}
+
+export async function createWaitlistEntry(payload: any, token: string): Promise<any> {
+  const res = await axios.post(`${API_BASE}/crm/waitlist`, payload, {
     headers: { Authorization: `Bearer ${token}` }
   });
   return res.data;

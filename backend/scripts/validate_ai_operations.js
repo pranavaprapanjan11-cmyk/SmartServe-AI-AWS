@@ -1,7 +1,5 @@
-const { Pool } = require('pg');
+const { pool } = require('./db_helper');
 require('dotenv').config();
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function run() {
   console.log('--- STARTING AI OPERATIONS TELEMETRY & ENGINE VALIDATION ---');

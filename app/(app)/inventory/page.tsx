@@ -18,12 +18,16 @@ import * as inventoryService from "@/lib/services/inventoryService"
 import * as menuService from "@/lib/services/menuService"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import SuppliersTab from "@/components/inventory/suppliers-tab"
+import PurchaseOrdersTab from "@/components/inventory/purchase-orders-tab"
+import WastageTab from "@/components/inventory/wastage-tab"
+import ReconciliationTab from "@/components/inventory/reconciliation-tab"
 
 export default function InventoryPage() {
   const { token } = useAuth()
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"stock" | "recipes">("stock")
+  const [activeTab, setActiveTab] = useState<"stock" | "recipes" | "suppliers" | "purchase-orders" | "wastage" | "reconciliation">("stock")
   
   // Data States
   const [inventoryItems, setInventoryItems] = useState<inventoryService.InventoryItem[]>([])
@@ -270,12 +274,14 @@ export default function InventoryPage() {
         )}
       </PageHeader>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total SKUs" value={inventoryItems.length} icon={Package} accent="primary" index={0} />
-        <StatCard label="In Stock Items" value={inventoryItems.filter(i => i.quantity_on_hand > i.reorder_threshold).length} icon={Boxes} accent="emerald" index={1} />
-        <StatCard label="Low Stock" value={lowCount} icon={TrendingDown} accent="amber" index={2} />
-        <StatCard label="Critical Alarms" value={criticalCount} icon={AlertTriangle} accent="orange" index={3} />
-      </div>
+      {(activeTab === "stock" || activeTab === "recipes") && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Total SKUs" value={inventoryItems.length} icon={Package} accent="primary" index={0} />
+          <StatCard label="In Stock Items" value={inventoryItems.filter(i => i.quantity_on_hand > i.reorder_threshold).length} icon={Boxes} accent="emerald" index={1} />
+          <StatCard label="Low Stock" value={lowCount} icon={TrendingDown} accent="amber" index={2} />
+          <StatCard label="Critical Alarms" value={criticalCount} icon={AlertTriangle} accent="orange" index={3} />
+        </div>
+      )}
 
       <Card>
         <CardContent className="pt-6">
@@ -284,9 +290,13 @@ export default function InventoryPage() {
             setQuery("")
           }}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4 mb-4">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto gap-1 p-1">
                 <TabsTrigger value="stock">Stock List</TabsTrigger>
                 <TabsTrigger value="recipes">Recipe Mapper</TabsTrigger>
+                <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+                <TabsTrigger value="purchase-orders">Purchase Orders</TabsTrigger>
+                <TabsTrigger value="wastage">Wastage Log</TabsTrigger>
+                <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
               </TabsList>
 
               {activeTab === "stock" && (
@@ -460,6 +470,19 @@ export default function InventoryPage() {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="suppliers" className="m-0 pt-2">
+              <SuppliersTab />
+            </TabsContent>
+            <TabsContent value="purchase-orders" className="m-0 pt-2">
+              <PurchaseOrdersTab />
+            </TabsContent>
+            <TabsContent value="wastage" className="m-0 pt-2">
+              <WastageTab />
+            </TabsContent>
+            <TabsContent value="reconciliation" className="m-0 pt-2">
+              <ReconciliationTab />
             </TabsContent>
           </Tabs>
         </CardContent>

@@ -157,7 +157,7 @@ export async function getCategories(token: string): Promise<MenuCategory[]> {
 }
 
 export async function createMenuCategory(
-  payload: { name: string; description?: string; color_code?: string; icon_emoji?: string },
+  payload: { name: string; description?: string; color_code?: string; icon_emoji?: string; display_order?: number },
   token: string
 ): Promise<MenuCategory> {
   const res = await axios.post<MenuCategory>(`${API_BASE}/menu/categories`, payload, {

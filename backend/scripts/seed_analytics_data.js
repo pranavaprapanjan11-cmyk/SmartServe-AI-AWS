@@ -1,9 +1,8 @@
 require('dotenv').config();
-const { Pool } = require('pg');
+const { pool } = require('./db_helper');
 const bcrypt = require('bcrypt');
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

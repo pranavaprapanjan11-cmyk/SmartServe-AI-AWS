@@ -1,20 +1,12 @@
-const { Pool } = require('pg');
+const { pool } = require('./db_helper');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
-
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  console.error('ERROR: DATABASE_URL environment variable is not defined.');
-  process.exit(1);
-}
 
 const schemaDir = path.join(__dirname, '../../database/schema');
 
 async function run() {
   console.log('--- STARTING ALL DATABASE MIGRATIONS ---');
-  const pool = new Pool({ connectionString });
   const client = await pool.connect();
 
   try {

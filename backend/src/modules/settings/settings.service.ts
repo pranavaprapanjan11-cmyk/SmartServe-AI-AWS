@@ -1,6 +1,6 @@
 // File: backend/src/modules/settings/settings.service.ts
 
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { getRestaurantId } from '../orders/orders.service';
 import {
   PrinterSettingsPayload,
@@ -9,7 +9,7 @@ import {
   RestaurantSettingsRecord,
 } from './settings.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 export async function getRestaurantSettings(userId: string, role: string): Promise<RestaurantSettingsRecord | null> {
   const restaurantId = await getRestaurantId(userId, role);
@@ -42,8 +42,14 @@ export async function upsertRestaurantSettings(
            address = $7,
            contact_number = $8,
            gst_number = $9,
+           branch_name = $10,
+           email = $11,
+           website = $12,
+           upi_id = $13,
+           tax_percent = $14,
+           currency = $15,
            updated_at = NOW()
-       WHERE restaurant_id = $10
+       WHERE restaurant_id = $16
        RETURNING *`,
       [
         payload.restaurant_name,
@@ -55,6 +61,12 @@ export async function upsertRestaurantSettings(
         payload.address,
         payload.contact_number,
         payload.gst_number,
+        payload.branch_name || null,
+        payload.email || null,
+        payload.website || null,
+        payload.upi_id || null,
+        payload.tax_percent !== undefined ? payload.tax_percent : 18.0,
+        payload.currency || 'INR',
         restaurantId,
       ]
     );
@@ -63,8 +75,9 @@ export async function upsertRestaurantSettings(
 
   const { rows } = await pool.query(
     `INSERT INTO restaurant_settings
-      (restaurant_id, restaurant_name, logo_url, theme, compact_mode, high_contrast, animations_enabled, address, contact_number, gst_number)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      (restaurant_id, restaurant_name, logo_url, theme, compact_mode, high_contrast, animations_enabled, 
+       address, contact_number, gst_number, branch_name, email, website, upi_id, tax_percent, currency)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
     [
       restaurantId,
@@ -77,6 +90,12 @@ export async function upsertRestaurantSettings(
       payload.address,
       payload.contact_number,
       payload.gst_number,
+      payload.branch_name || null,
+      payload.email || null,
+      payload.website || null,
+      payload.upi_id || null,
+      payload.tax_percent !== undefined ? payload.tax_percent : 18.0,
+      payload.currency || 'INR',
     ]
   );
   return rows[0];

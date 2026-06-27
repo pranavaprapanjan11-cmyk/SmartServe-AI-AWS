@@ -1,5 +1,5 @@
 // File: backend/src/modules/tables/tables.service.ts
-import { Pool } from 'pg';
+import { pool } from '../../database';
 import { getRestaurantId } from '../orders/orders.service';
 import {
   RestaurantTable,
@@ -11,7 +11,7 @@ import {
 import { logEvent } from '../ai-operations/aiOperations.service';
 import { OperationalEventType } from '../ai-operations/aiOperations.types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 
 export async function listTables(userId: string, role: string): Promise<RestaurantTable[]> {
   const restaurantId = await getRestaurantId(userId, role);
@@ -28,17 +28,54 @@ export async function listTables(userId: string, role: string): Promise<Restaura
   return rows as RestaurantTable[];
 }
 
+function findNextAvailablePosition(existingTables: any[]) {
+  const cols = [40, 180, 320, 460, 600, 740];
+  const rows = [40, 180, 320, 460];
+  
+  for (const y of rows) {
+    for (const x of cols) {
+      const margin = 20;
+      const w = 80;
+      const h = 80;
+      const collides = existingTables.some(t => {
+        const tW = t.width || 80;
+        const tH = t.height || 80;
+        return (
+          x < Number(t.position_x) + tW + margin &&
+          x + w + margin > Number(t.position_x) &&
+          y < Number(t.position_y) + tH + margin &&
+          y + h + margin > Number(t.position_y)
+        );
+      });
+      if (!collides) {
+        return { position_x: x, position_y: y };
+      }
+    }
+  }
+  return { position_x: 80, position_y: 80 };
+}
+
 export async function createTable(
   userId: string,
   role: string,
   payload: CreateTablePayload
 ): Promise<RestaurantTable> {
   const restaurantId = await getRestaurantId(userId, role);
+  const existing = await listTables(userId, role);
+  
+  let posX = payload.position_x;
+  let posY = payload.position_y;
+  
+  if (posX === undefined || posY === undefined || (posX === 0 && posY === 0)) {
+    const nextPos = findNextAvailablePosition(existing);
+    posX = nextPos.position_x;
+    posY = nextPos.position_y;
+  }
   
   const sql = `
     INSERT INTO restaurant_tables 
-      (restaurant_id, table_number, capacity, status, section, shape, position_x, position_y)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      (restaurant_id, table_number, capacity, status, section, shape, position_x, position_y, width, height, rotation)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
   `;
   const { rows } = await pool.query(sql, [
@@ -48,8 +85,11 @@ export async function createTable(
     TableStatus.AVAILABLE,
     payload.section || 'Main Hall',
     payload.shape || 'square',
-    payload.position_x || 0,
-    payload.position_y || 0,
+    posX,
+    posY,
+    payload.width || 80,
+    payload.height || 80,
+    payload.rotation || 0,
   ]);
 
   try {
@@ -106,6 +146,9 @@ export async function updateTable(
     if (payload.shape !== undefined) addField('shape', payload.shape);
     if (payload.position_x !== undefined) addField('position_x', payload.position_x);
     if (payload.position_y !== undefined) addField('position_y', payload.position_y);
+    if (payload.width !== undefined) addField('width', payload.width);
+    if (payload.height !== undefined) addField('height', payload.height);
+    if (payload.rotation !== undefined) addField('rotation', payload.rotation);
   }
 
   if (fieldsToUpdate.length === 0) {
