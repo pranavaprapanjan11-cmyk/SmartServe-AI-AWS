@@ -411,7 +411,8 @@ export default function EmployeesPage() {
             </div>
 
             {/* TAB CONTENT: DIRECTORY */}
-            <TabsContent value="directory" className="m-0">
+            {activeTab === "directory" && (
+              <TabsContent value="directory" className="m-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -462,10 +463,12 @@ export default function EmployeesPage() {
                   })}
                 </TableBody>
               </Table>
-            </TabsContent>
+              </TabsContent>
+            )}
 
             {/* TAB CONTENT: LEAVES */}
-            <TabsContent value="leaves" className="m-0">
+            {activeTab === "leaves" && (
+              <TabsContent value="leaves" className="m-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -514,10 +517,12 @@ export default function EmployeesPage() {
                   )}
                 </TableBody>
               </Table>
-            </TabsContent>
+              </TabsContent>
+            )}
 
             {/* TAB CONTENT: SHIFTS */}
-            <TabsContent value="shifts" className="m-0">
+            {activeTab === "shifts" && (
+              <TabsContent value="shifts" className="m-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -548,10 +553,12 @@ export default function EmployeesPage() {
                   )}
                 </TableBody>
               </Table>
-            </TabsContent>
+              </TabsContent>
+            )}
 
             {/* TAB CONTENT: SALARY */}
-            <TabsContent value="salary" className="m-0">
+            {activeTab === "salary" && (
+              <TabsContent value="salary" className="m-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -606,6 +613,7 @@ export default function EmployeesPage() {
                 </TableBody>
               </Table>
             </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>

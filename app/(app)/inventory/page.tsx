@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo, useCallback, memo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Boxes, AlertTriangle, Package, TrendingDown, Plus, Sparkles, Search, Trash2, Save, Utensils } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
@@ -23,7 +23,7 @@ import PurchaseOrdersTab from "@/components/inventory/purchase-orders-tab"
 import WastageTab from "@/components/inventory/wastage-tab"
 import ReconciliationTab from "@/components/inventory/reconciliation-tab"
 
-export default function InventoryPage() {
+function InventoryPage() {
   const { token } = useAuth()
 
   // Tab State
@@ -313,7 +313,8 @@ export default function InventoryPage() {
             </div>
 
             {/* TAB CONTENT: STOCK LIST */}
-            <TabsContent value="stock" className="m-0">
+            {activeTab === "stock" && (
+              <TabsContent value="stock" className="m-0">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -357,10 +358,12 @@ export default function InventoryPage() {
                   )}
                 </TableBody>
               </Table>
-            </TabsContent>
+              </TabsContent>
+            )}
 
             {/* TAB CONTENT: RECIPE MAPPER */}
-            <TabsContent value="recipes" className="m-0">
+            {activeTab === "recipes" && (
+              <TabsContent value="recipes" className="m-0">
               <div className="grid gap-6 md:grid-cols-[1fr_1.3fr]">
                 {/* Menu Item Selector (Left) */}
                 <div className="space-y-4">
@@ -470,23 +473,34 @@ export default function InventoryPage() {
                   </div>
                 </div>
               </div>
-            </TabsContent>
+              </TabsContent>
+            )}
 
-            <TabsContent value="suppliers" className="m-0 pt-2">
-              <SuppliersTab />
-            </TabsContent>
-            <TabsContent value="purchase-orders" className="m-0 pt-2">
-              <PurchaseOrdersTab />
-            </TabsContent>
-            <TabsContent value="wastage" className="m-0 pt-2">
-              <WastageTab />
-            </TabsContent>
-            <TabsContent value="reconciliation" className="m-0 pt-2">
-              <ReconciliationTab />
-            </TabsContent>
+            {activeTab === "suppliers" && (
+              <TabsContent value="suppliers" className="m-0 pt-2">
+                <SuppliersTab />
+              </TabsContent>
+            )}
+            {activeTab === "purchase-orders" && (
+              <TabsContent value="purchase-orders" className="m-0 pt-2">
+                <PurchaseOrdersTab />
+              </TabsContent>
+            )}
+            {activeTab === "wastage" && (
+              <TabsContent value="wastage" className="m-0 pt-2">
+                <WastageTab />
+              </TabsContent>
+            )}
+            {activeTab === "reconciliation" && (
+              <TabsContent value="reconciliation" className="m-0 pt-2">
+                <ReconciliationTab />
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>
     </div>
   )
 }
+
+export default memo(InventoryPage)

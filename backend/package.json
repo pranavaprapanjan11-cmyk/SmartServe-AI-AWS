@@ -16,6 +16,7 @@
     "@aws-sdk/client-secrets-manager": "^3.1075.0",
     "@aws-sdk/client-sts": "^3.1075.0",
     "@aws-sdk/rds-signer": "^3.1075.0",
+    "@google/genai": "^2.10.0",
     "@google/generative-ai": "^0.24.1",
     "@types/bcrypt": "^5.0.0",
     "@types/bcryptjs": "^2.4.6",

@@ -7,6 +7,8 @@ import { OCRParseResult, ExtractedItem } from './ocr.types';
 import * as menuService from '../menu/menu.service';
 import { authenticateJWT, authorizeRoles } from '../auth/auth.middleware';
 import { Role } from '../auth/auth.types';
+import { GoogleGenAI } from '@google/genai';
+import { importOcrInvoice } from '../inventory/inventory.service';
 
 const router = express.Router();
 const uploadDir = path.join(process.cwd(), 'backend', 'uploads');
@@ -17,6 +19,20 @@ const storage = multer.diskStorage({
   filename: (req: any, file: any, cb: any) => cb(null, `${Date.now()}-${file.originalname}`),
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+function parseBase64Image(payload: string) {
+  const matches = payload.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.*)$/);
+  if (matches && matches.length === 3) {
+    return {
+      mimeType: matches[1],
+      data: matches[2]
+    };
+  }
+  return {
+    mimeType: 'image/jpeg',
+    data: payload
+  };
+}
 
 // GET /api/ocr/health - check status of python torch, easyocr, and tesseract
 router.get('/health', async (req: Request, res: Response) => {
@@ -43,27 +59,99 @@ router.post('/upload', upload.single('file'), async (req: any, res: Response) =>
 });
 
 // POST /api/ocr/parse - parse previously uploaded file by fileId or accept file directly
-router.post('/parse', upload.single('file'), async (req: any, res: Response) => {
+router.post('/parse', authenticateJWT, upload.single('file'), async (req: any, res: Response) => {
   try {
-    let filePath: string | null = null;
-    if (req.file) {
-      filePath = (req.file as Express.Multer.File).path;
-    } else if (req.body.fileId) {
-      const candidate = path.join(uploadDir, req.body.fileId);
-      if (fs.existsSync(candidate)) filePath = candidate;
-      else return res.status(400).json({ message: 'fileId not found' });
+    let base64Data = '';
+    let mimeType = 'image/jpeg';
+
+    if (req.body.image) {
+      // Inline base64 payload
+      const parsed = parseBase64Image(req.body.image);
+      base64Data = parsed.data;
+      mimeType = parsed.mimeType;
     } else {
-      return res.status(400).json({ message: 'No file or fileId provided' });
+      let filePath: string | null = null;
+      if (req.file) {
+        filePath = (req.file as Express.Multer.File).path;
+      } else if (req.body.fileId) {
+        const candidate = path.join(uploadDir, req.body.fileId);
+        if (fs.existsSync(candidate)) filePath = candidate;
+        else return res.status(400).json({ message: 'fileId not found' });
+      } else {
+        return res.status(400).json({ message: 'No file, fileId or image base64 provided' });
+      }
+
+      const ext = path.extname(filePath!).toLowerCase();
+      mimeType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : ext === '.pdf' ? 'application/pdf' : 'image/jpeg';
+      base64Data = fs.readFileSync(filePath).toString('base64');
     }
 
-    const ext = path.extname(filePath!).toLowerCase();
-    let result: OCRParseResult;
-    if (ext === '.pdf') result = await parsePDFFile(filePath!);
-    else result = await parseImageFile(filePath!);
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(500).json({ message: 'GEMINI_API_KEY environment variable is not configured.' });
+    }
 
-    return res.json(result);
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        'Extract structured receipt/invoice details from the provided image payload.',
+        {
+          inlineData: {
+            data: base64Data,
+            mimeType
+          }
+        }
+      ],
+      config: {
+        systemInstruction: 'You are an AI-powered receipt/invoice processing assistant. Parse the text from the receipt/invoice image and return a JSON object with: supplier name (string), items (array of objects containing name (string), quantity (number), and price (number)), and totalAmount (number). Ensure the output matches the required JSON Schema exactly.',
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            supplier: { type: 'STRING' },
+            items: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  name: { type: 'STRING' },
+                  quantity: { type: 'NUMBER' },
+                  price: { type: 'NUMBER' }
+                },
+                required: ['name', 'quantity', 'price']
+              }
+            },
+            totalAmount: { type: 'NUMBER' }
+          },
+          required: ['supplier', 'items', 'totalAmount']
+        }
+      }
+    });
+
+    const text = response.text;
+    if (!text) {
+      return res.status(500).json({ message: 'Gemini returned an empty response' });
+    }
+
+    const parsedResult = JSON.parse(text);
+
+    // Pass the clean, parsed response object directly to the inventory database router (importOcrInvoice service)
+    const userId = (req as any).user?.id;
+    const role = (req as any).user?.role;
+    if (!userId || !role) {
+      return res.status(401).json({ message: 'Unauthorized: User context is required to register inventory imports.' });
+    }
+
+    const purchaseOrder = await importOcrInvoice(userId, role, parsedResult);
+
+    return res.json({
+      success: true,
+      data: parsedResult,
+      purchaseOrder
+    });
   } catch (err: any) {
-    return res.status(500).json({ message: 'OCR parse failed', error: String(err.message || err) });
+    console.error('Gemini OCR receipt parse failed:', err);
+    return res.status(500).json({ message: 'Gemini OCR parse and inventory import failed', error: String(err.message || err) });
   }
 });
 

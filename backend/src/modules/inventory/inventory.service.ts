@@ -1325,4 +1325,143 @@ export async function getAuditForm(userId: string, role: string): Promise<any[]>
   });
 }
 
+export async function importOcrInvoice(
+  userId: string,
+  role: string,
+  payload: {
+    supplier: string;
+    items: { name: string; quantity: number; price: number }[];
+    totalAmount: number;
+  }
+) {
+  const restaurantId = await resolveRestaurantId(userId, role);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Find or create supplier
+    const supplierName = (payload.supplier || 'Default OCR Supplier').trim();
+    let supplierId: string;
+    const { rows: supRows } = await client.query(
+      `SELECT id FROM suppliers WHERE restaurant_id = $1 AND name = $2`,
+      [restaurantId, supplierName]
+    );
+    if (supRows.length > 0) {
+      supplierId = supRows[0].id;
+    } else {
+      const { rows: newSupRows } = await client.query(
+        `INSERT INTO suppliers (restaurant_id, name, is_active, created_at)
+         VALUES ($1, $2, true, NOW())
+         RETURNING id`,
+        [restaurantId, supplierName]
+      );
+      supplierId = newSupRows[0].id;
+    }
+
+    // 2. Find or create default category for inventory items if needed
+    let categoryId: string;
+    const { rows: catRows } = await client.query(
+      `SELECT id FROM inventory_categories WHERE restaurant_id = $1 LIMIT 1`,
+      [restaurantId]
+    );
+    if (catRows.length > 0) {
+      categoryId = catRows[0].id;
+    } else {
+      const { rows: newCatRows } = await client.query(
+        `INSERT INTO inventory_categories (restaurant_id, name, created_at)
+         VALUES ($1, 'General', NOW())
+         RETURNING id`,
+        [restaurantId]
+      );
+      categoryId = newCatRows[0].id;
+    }
+
+    const orderedItems = [];
+
+    // 3. For each item, find or create inventory item
+    for (const item of payload.items || []) {
+      const itemName = (item.name || 'Unnamed Item').trim();
+      let itemId: string;
+      const { rows: itemRows } = await client.query(
+        `SELECT id FROM inventory_items WHERE restaurant_id = $1 AND name = $2`,
+        [restaurantId, itemName]
+      );
+      if (itemRows.length > 0) {
+        itemId = itemRows[0].id;
+      } else {
+        const { rows: newItemRows } = await client.query(
+          `INSERT INTO inventory_items (restaurant_id, category_id, supplier_id, name, unit, quantity_on_hand, reorder_threshold, created_at)
+           VALUES ($1, $2, $3, $4, 'units', 0, 0, NOW())
+           RETURNING id`,
+          [restaurantId, categoryId, supplierId, itemName]
+        );
+        itemId = newItemRows[0].id;
+      }
+
+      orderedItems.push({
+        inventory_item_id: itemId,
+        quantity: Number(item.quantity || 1),
+        unit_cost: Number(item.price || 0)
+      });
+    }
+
+    // 4. Create the purchase order with status DELIVERED
+    const totalAmount = Number(payload.totalAmount || 0);
+
+    const { rows: poRows } = await client.query(
+      `INSERT INTO purchase_orders (restaurant_id, supplier_id, status, notes, total_amount, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING *`,
+      [restaurantId, supplierId, 'DELIVERED', 'Imported via Receipt OCR', totalAmount]
+    );
+    const po = poRows[0];
+
+    for (const item of orderedItems) {
+      const lineCost = item.quantity * item.unit_cost;
+      await client.query(
+        `INSERT INTO purchase_order_items (purchase_order_id, inventory_item_id, quantity, unit_cost, total_cost)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [po.id, item.inventory_item_id, item.quantity, item.unit_cost, lineCost]
+      );
+
+      // Increment stock
+      await client.query(
+        `UPDATE inventory_items
+         SET quantity_on_hand = quantity_on_hand + $1,
+             updated_at = NOW()
+         WHERE id = $2 AND restaurant_id = $3`,
+        [item.quantity, item.inventory_item_id, restaurantId]
+      );
+
+      // Log transaction
+      await client.query(
+        `INSERT INTO inventory_transactions
+          (restaurant_id, inventory_item_id, change_amount, transaction_type, note, created_at)
+         VALUES ($1, $2, $3, 'STOCK_IN', $4, NOW())`,
+        [restaurantId, item.inventory_item_id, item.quantity, `Receipt OCR import PO delivery: ${po.id}`]
+      );
+
+      // Log activity
+      await client.query(
+        `INSERT INTO activity_events (restaurant_id, event_type, description, payload, created_at)
+         VALUES ($1, $2, $3, $4, NOW())`,
+        [
+          restaurantId,
+          'STOCK_REFILLED',
+          `Inventory item refilled via OCR Invoice (Added ${item.quantity} units)`,
+          JSON.stringify({ itemId: item.inventory_item_id, quantityAdded: item.quantity, poId: po.id })
+        ]
+      );
+    }
+
+    await client.query('COMMIT');
+    return po;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 

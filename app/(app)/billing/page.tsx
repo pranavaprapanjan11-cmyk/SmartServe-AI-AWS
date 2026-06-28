@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo, useCallback, memo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Plus, Minus, Trash2, Receipt, CreditCard, Smartphone, Banknote, IndianRupee, Check, ShieldAlert, Printer, ArrowRight } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
@@ -22,7 +22,7 @@ const payMethods = [
   { label: "Cash", val: "Cash", icon: Banknote },
 ] as const
 
-export default function BillingPage() {
+function BillingPage() {
   const { token } = useAuth()
   
   // Data
@@ -492,3 +492,5 @@ export default function BillingPage() {
     </div>
   )
 }
+
+export default memo(BillingPage)

@@ -179,7 +179,8 @@ export default function AIStudioPage() {
         </TabsList>
 
         {/* CHAT TAB */}
-        <TabsContent value="chat">
+        {activeTab === "chat" && (
+          <TabsContent value="chat">
           <Card className="flex h-[560px] flex-col">
             <CardHeader className="border-b border-border/50 py-3">
               <CardTitle className="flex items-center gap-2 text-base font-medium">
@@ -252,10 +253,12 @@ export default function AIStudioPage() {
               </form>
             </div>
           </Card>
-        </TabsContent>
+          </TabsContent>
+        )}
 
         {/* PREDICTIONS TAB */}
-        <TabsContent value="analytics" className="space-y-6">
+        {activeTab === "analytics" && (
+          <TabsContent value="analytics" className="space-y-6">
           {analyticsLoading ? (
             <div className="flex h-[300px] items-center justify-center">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
@@ -362,10 +365,12 @@ export default function AIStudioPage() {
               </div>
             </div>
           )}
-        </TabsContent>
+          </TabsContent>
+        )}
 
         {/* REPORTS TAB */}
-        <TabsContent value="reports" className="space-y-4">
+        {activeTab === "reports" && (
+          <TabsContent value="reports" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Card className="h-full">
               <CardContent className="flex items-start gap-4 p-5">
@@ -418,6 +423,7 @@ export default function AIStudioPage() {
             </DialogContent>
           </Dialog>
         </TabsContent>
+        )}
       </Tabs>
     </div>
   )

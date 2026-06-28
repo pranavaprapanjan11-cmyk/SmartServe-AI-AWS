@@ -93,6 +93,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                     {active && (
                       <motion.div
                         layoutId="sidebar-active"
+                        layout="position"
                         className="absolute inset-0 rounded-lg bg-sidebar-accent/90"
                         transition={{ type: "spring", stiffness: 380, damping: 32 }}
                       />

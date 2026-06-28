@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback, useRef } from "react"
+import { useEffect, useState, useCallback, useRef, memo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Clock, Flame, CheckCircle2, ChefHat, Timer, RotateCcw, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
@@ -187,7 +187,7 @@ function KitchenTicket({ order, index, columnKey, isHighlighted, onAction, onRem
   )
 }
 
-export default function KitchenPage() {
+function KitchenPage() {
   const { token, sseActive, user } = useAuth()
   const [loading, setLoading] = useState(true)
   const [newOrders, setNewOrders] = useState<orderService.Order[]>([])
@@ -434,3 +434,5 @@ export default function KitchenPage() {
     </div>
   )
 }
+
+export default memo(KitchenPage)

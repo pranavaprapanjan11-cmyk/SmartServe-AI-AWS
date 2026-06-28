@@ -1,9 +1,46 @@
 "use client"
-
+import React from "react"
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Sparkles, X, Send, TrendingUp, Boxes, FileText, Lightbulb } from "lucide-react"
+import { Sparkles, X, Send, TrendingUp, Boxes, FileText, Lightbulb, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/context/AuthContext"
+import { API_BASE } from "@/lib/config"
+
+function renderFormattedText(text: string) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  return lines.map((line, idx) => {
+    let content: React.ReactNode[] = [];
+    const parts = line.split(/\*\*([\s\S]*?)\*\*/g);
+    parts.forEach((part, partIdx) => {
+      if (partIdx % 2 === 1) {
+        content.push(<strong key={partIdx} className="font-bold text-foreground">{part}</strong>);
+      } else {
+        content.push(part);
+      }
+    });
+
+    if (line.trim().startsWith("- ") || line.trim().startsWith("* ")) {
+      const bulletText = line.trim().replace(/^[-*]\s+/, "");
+      return (
+        <li key={idx} className="ml-4 list-disc text-sm my-0.5 text-foreground/90">
+          {bulletText}
+        </li>
+      );
+    }
+
+    if (line.trim() === "") {
+      return <div key={idx} className="h-1.5" />;
+    }
+
+    return (
+      <p key={idx} className="my-0.5 text-sm leading-relaxed text-foreground/90">
+        {content}
+      </p>
+    );
+  });
+}
 
 const quickPrompts = [
   { icon: TrendingUp, label: "Sales forecast" },
@@ -65,9 +102,11 @@ function ChefRobot({ small }: { small?: boolean }) {
 }
 
 export function AIAssistant() {
+  const { token } = useAuth()
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState("")
   const [showGreeting, setShowGreeting] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState<Msg[]>([
     { role: "ai", text: "Hi, I'm Chef — your AI restaurant co-pilot. Ask me anything about tonight's service." },
   ])
@@ -75,7 +114,7 @@ export function AIAssistant() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
-  }, [messages, open])
+  }, [messages, open, loading])
 
   // Chef peeks in with a greeting shortly after load, then tucks away.
   useEffect(() => {
@@ -88,12 +127,74 @@ export function AIAssistant() {
     }
   }, [open])
 
-  function send(text: string) {
+  async function send(text: string) {
     const value = text.trim()
-    if (!value) return
-    const reply = cannedReplies[value] || cannedReplies.default
-    setMessages((m) => [...m, { role: "user", text: value }, { role: "ai", text: reply }])
+    if (!value || loading) return
+    
     setInput("")
+
+    const newUserMessage: Msg = { role: "user", text: value }
+    const updatedMessages = [...messages, newUserMessage]
+    setMessages(updatedMessages)
+    setLoading(true)
+
+    try {
+      // Map the messages history to the schema expected by the backend
+      const payloadMessages = updatedMessages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        content: m.text
+      }));
+
+      const res = await fetch(`${API_BASE}/assistant/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ messages: payloadMessages })
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to communicate with Assistant");
+      }
+
+      // Check if streaming is supported by the browser response
+      const reader = res.body?.getReader();
+      if (!reader) {
+        // Fallback if reader is not available
+        const bodyText = await res.text();
+        setMessages((m) => [...m, { role: "ai", text: bodyText }]);
+        setLoading(false);
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let aiResponseText = "";
+
+      // Append initial empty message for the streaming output
+      setMessages((m) => [...m, { role: "ai", text: "" }]);
+
+      while (true) {
+        const { done, value: chunkValue } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(chunkValue, { stream: true });
+        aiResponseText += chunk;
+
+        // Render response chunks in real time
+        setMessages((prev) => {
+          const next = [...prev];
+          if (next.length > 0) {
+            next[next.length - 1] = { role: "ai", text: aiResponseText };
+          }
+          return next;
+        });
+      }
+    } catch (err: any) {
+      console.error("AI Assistant chat error:", err);
+      setMessages((m) => [...m, { role: "ai", text: `⚠️ Connection failed: ${err.message || err}` }]);
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -133,10 +234,17 @@ export function AIAssistant() {
                         : "rounded-bl-sm bg-muted text-foreground"
                     )}
                   >
-                    {m.text}
+                    {m.role === "user" ? m.text : renderFormattedText(m.text)}
                   </div>
                 </div>
               ))}
+              {loading && messages[messages.length - 1]?.role === "user" && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-muted px-3.5 py-2.5 text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> Thinking...
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="border-t border-border p-3">

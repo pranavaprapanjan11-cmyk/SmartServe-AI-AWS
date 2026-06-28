@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, memo } from "react"
 import { IndianRupee, ShoppingBag, TrendingUp, Receipt, AlertTriangle, ShieldCheck } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
@@ -17,7 +17,7 @@ import { useAuth } from "@/context/AuthContext"
 import * as analyticsService from "@/lib/services/analyticsService"
 import { toast } from "sonner"
 
-export default function AnalyticsPage() {
+function AnalyticsPage() {
   const { token, sseActive } = useAuth()
   const [dashboard, setDashboard] = useState<analyticsService.AnalyticsDashboard | null>(null)
   const [loading, setLoading] = useState(true)
@@ -247,3 +247,5 @@ export default function AnalyticsPage() {
     </div>
   )
 }
+
+export default memo(AnalyticsPage)
