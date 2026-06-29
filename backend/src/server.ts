@@ -24,11 +24,16 @@ import crmRouter from './modules/crm/crm.routes';
 import workspaceRouter from './modules/workspace/workspace.routes';
 
 const app = express();
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://smartserve-ai-aws-five.vercel.app'
+];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://smartserve-ai-aws-five.vercel.app'
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json());
@@ -85,6 +90,13 @@ app.use('/api/workspace', workspaceRouter);
 import { sseHandler } from './modules/workspace/workspace.sse';
 
 let isGeminiConnected = false;
+
+// Simple health check returning status ok
+app.get('/health', (_, res) => {
+  res.status(200).json({
+    status: 'ok'
+  });
+});
 
 // Health check
 app.get('/api/health', async (_req, res) => {

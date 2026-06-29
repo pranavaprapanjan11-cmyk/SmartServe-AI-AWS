@@ -5,6 +5,5 @@ dist
 .env.local
 .venv
 .venv-1
-backend/node_modules
-backend/dist
-backend/uploads
+backend
+ai-engine

@@ -1,5 +1,6 @@
 const getApiBase = () => {
   if (typeof process !== 'undefined' && process.env) {
+    if (process.env.VITE_API_URL) return process.env.VITE_API_URL;
     if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
     if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
   }
@@ -21,4 +22,7 @@ const getApiBase = () => {
 
 export const API_BASE = getApiBase();
 
-console.log("API_BASE is set to:", API_BASE);
+console.log("Current API URL:", API_BASE);
+console.log("Environment mode:", process.env.NODE_ENV || "development");
+console.log("Build version:", "0.1.0");
+
