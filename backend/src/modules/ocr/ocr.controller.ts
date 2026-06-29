@@ -90,67 +90,15 @@ router.post('/parse', authenticateJWT, upload.single('file'), async (req: any, r
       return res.status(500).json({ message: 'GEMINI_API_KEY environment variable is not configured.' });
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     let attempts = 0;
     let parsedResult: any = null;
     let geminiError: any = null;
 
+    const { parseDocumentImage } = require('../../services/gemini.service');
+
     while (attempts < 2) {
       try {
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: [
-            'Extract structured invoice/receipt details from the provided image payload.',
-            {
-              inlineData: {
-                data: base64Data,
-                mimeType
-              }
-            }
-          ],
-          config: {
-            systemInstruction: 'You are an AI-powered restaurant document processing assistant. If the document is an invoice/receipt, parse the supplierName, invoiceNumber, invoiceDate, items (name, quantity, unitPrice, totalPrice), subtotal, tax, and grandTotal. If the document is a menu card/list, set supplierName as the restaurant name (or "Menu"), items with name (dish name), quantity (1), unitPrice (dish price), and totalPrice (dish price), and set subtotal, tax (0), and grandTotal as the sum of dishes. Return a JSON object matching the Schema exactly. Do not leave required values blank or null.',
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'OBJECT',
-              properties: {
-                supplierName: { type: 'STRING' },
-                invoiceNumber: { type: 'STRING' },
-                invoiceDate: { type: 'STRING' },
-                items: {
-                  type: 'ARRAY',
-                  items: {
-                    type: 'OBJECT',
-                    properties: {
-                      name: { type: 'STRING' },
-                      quantity: { type: 'NUMBER' },
-                      unitPrice: { type: 'NUMBER' },
-                      totalPrice: { type: 'NUMBER' }
-                    },
-                    required: ['name', 'quantity', 'unitPrice', 'totalPrice']
-                  }
-                },
-                subtotal: { type: 'NUMBER' },
-                tax: { type: 'NUMBER' },
-                grandTotal: { type: 'NUMBER' }
-              },
-              required: ['supplierName', 'invoiceNumber', 'invoiceDate', 'items', 'subtotal', 'tax', 'grandTotal']
-            }
-          }
-        });
-
-        const text = response.text;
-        if (!text) {
-          throw new Error('Gemini returned an empty response');
-        }
-
-        parsedResult = JSON.parse(text);
-
-        // Validation check
-        if (!parsedResult.supplierName || !parsedResult.items || !Array.isArray(parsedResult.items) || parsedResult.items.length === 0) {
-          throw new Error('Missing key fields in Gemini output');
-        }
-
+        parsedResult = await parseDocumentImage(base64Data, mimeType);
         break;
       } catch (err) {
         geminiError = err;
@@ -168,7 +116,7 @@ router.post('/parse', authenticateJWT, upload.single('file'), async (req: any, r
 
     // Confidence validation logic
     let confidence = 0.95;
-    const computedTotal = (parsedResult.items || []).reduce((acc: number, item: any) => acc + (Number(item.quantity) * Number(item.unitPrice)), 0);
+    const computedTotal = (parsedResult.items || []).reduce((acc: number, item: any) => acc + (Number(item.quantity) * Number(item.unitPrice || item.price)), 0);
     const subtotal = Number(parsedResult.subtotal || 0);
     const tax = Number(parsedResult.tax || 0);
     const grandTotal = Number(parsedResult.grandTotal || 0);

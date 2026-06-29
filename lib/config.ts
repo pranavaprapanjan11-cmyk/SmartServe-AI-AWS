@@ -1,6 +1,7 @@
 const getApiBase = () => {
-  if (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_API_BASE) {
-    return process.env.NEXT_PUBLIC_API_BASE;
+  if (typeof process !== 'undefined' && process.env) {
+    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+    if (process.env.NEXT_PUBLIC_API_BASE) return process.env.NEXT_PUBLIC_API_BASE;
   }
   
   try {

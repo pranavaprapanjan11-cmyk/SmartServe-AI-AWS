@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { GoogleGenAI } from '@google/genai';
+import { ai } from '../../services/gemini.service';
 
 export async function handleAssistantChat(req: Request, res: Response) {
   try {
@@ -11,8 +11,6 @@ export async function handleAssistantChat(req: Request, res: Response) {
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ message: 'GEMINI_API_KEY environment variable is not configured.' });
     }
-
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     // Map history to shape expected by Gemini
     const contents = messages.map(m => ({

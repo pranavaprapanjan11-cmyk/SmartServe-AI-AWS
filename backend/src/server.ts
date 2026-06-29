@@ -84,21 +84,23 @@ app.use('/api/workspace', workspaceRouter);
 
 import { sseHandler } from './modules/workspace/workspace.sse';
 
+let isGeminiConnected = false;
+
 // Health check
 app.get('/api/health', async (_req, res) => {
+  let dbStatus = 'failed';
   try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({
-      status: 'ok',
-      db: 'connected',
-      time: result.rows[0]
-    });
-  } catch (error: any) {
-    res.status(500).json({
-      status: 'error',
-      message: error.message
-    });
+    await pool.query('SELECT 1');
+    dbStatus = 'connected';
+  } catch (err) {
+    dbStatus = 'failed';
   }
+
+  res.json({
+    database: dbStatus,
+    gemini: isGeminiConnected ? 'connected' : 'failed',
+    server: 'running'
+  });
 });
 
 // Aurora DB test verification endpoint
@@ -126,6 +128,12 @@ app.get('/api/db-test', async (_req, res) => {
 app.get('/api/workspace/updates', sseHandler);
 
 const PORT = Number(process.env.PORT) || 4000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Backend server listening on port ${PORT}`);
+  try {
+    const { runStartupTest } = require('./services/gemini.service');
+    isGeminiConnected = await runStartupTest();
+  } catch (err) {
+    console.error('Failed to trigger Gemini startup test:', err);
+  }
 });
