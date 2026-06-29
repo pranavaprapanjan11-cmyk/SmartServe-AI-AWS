@@ -142,6 +142,7 @@ app.get('/api/workspace/updates', sseHandler);
 const PORT = Number(process.env.PORT) || 4000;
 app.listen(PORT, async () => {
   console.log(`Backend server listening on port ${PORT}`);
+  console.log("Gemini Key Loaded:", !!process.env.GEMINI_API_KEY);
   try {
     const { runStartupTest } = require('./services/gemini.service');
     isGeminiConnected = await runStartupTest();

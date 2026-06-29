@@ -91,16 +91,27 @@ export async function fetchAiChat(req: RequestWithUser, res: Response) {
       return res.status(400).json({ message: 'Message is required' });
     }
 
+    console.log("AI Request Received");
+
     const responseText = await getChatResponse(
       req.user.id,
       req.user.role,
       message,
       history || []
     );
-    return res.json({ response: responseText });
+
+    console.log("Gemini Response Generated");
+
+    return res.json({
+      success: true,
+      response: responseText
+    });
   } catch (err: any) {
-    console.error('fetchAiChat error:', err);
-    return res.status(500).json({ message: err.message || 'Failed to get chat response' });
+    console.error("Gemini Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to get chat response'
+    });
   }
 }
 

@@ -7,7 +7,6 @@ import { OCRParseResult, ExtractedItem } from './ocr.types';
 import * as menuService from '../menu/menu.service';
 import { authenticateJWT, authorizeRoles } from '../auth/auth.middleware';
 import { Role } from '../auth/auth.types';
-import { GoogleGenAI } from '@google/genai';
 import { importOcrInvoice } from '../inventory/inventory.service';
 
 const router = express.Router();

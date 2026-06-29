@@ -434,10 +434,16 @@ export async function getLiveContext(userId: string, role: string): Promise<any>
   };
 }
 
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Initialize the Google Gen AI client
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+// Lazy loader for client in this module
+let genAIInService: GoogleGenerativeAI | null = null;
+function getGenAIClient() {
+  if (!genAIInService) {
+    genAIInService = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  }
+  return genAIInService;
+}
 
 export async function getChatResponse(
   userId: string,
@@ -471,8 +477,19 @@ Live context retrieved:
       parts: [{ text: message }]
     });
 
-    const systemInstruction = `You are SmartServe-AI, an intelligent restaurant management co-pilot.
-You have access to the following live restaurant data to answer queries accurately:
+    const systemInstruction = `You are SmartServe AI.
+You help restaurant owners, managers, waiters, and kitchen staff.
+You answer questions about:
+- Orders
+- Menu items
+- Revenue
+- Customer analytics
+- Restaurant operations
+- Inventory
+- Staff productivity
+Provide concise, actionable responses. Format your operational recommendations using clean, readable Markdown syntax.
+
+Here is the live restaurant operating context:
 - Current Date: ${context.current_date}
 - Current Time: ${context.current_time}
 - Today's Revenue: ₹${context.dashboard_metrics?.today_revenue || 0}
@@ -480,22 +497,26 @@ You have access to the following live restaurant data to answer queries accurate
 - Pending Orders: ${JSON.stringify(context.orders?.pending || [])}
 - Kitchen Queue: ${JSON.stringify(context.orders?.kitchen_queue || [])}
 - Low Stock items: ${JSON.stringify(context.inventory?.low_stock || [])}
-- Employees Roster: ${JSON.stringify(context.employees || [])}
+- Employees Roster: ${JSON.stringify(context.employees || [])}`;
 
-Answer briefly, professionally, and use clean markdown formatting. Keep the tone helpful, efficient, and operational.`;
-
-    const result = await ai.models.generateContent({
+    const model = getGenAIClient().getGenerativeModel({
       model: 'gemini-2.5-flash',
-      contents,
-      config: {
-        maxOutputTokens: 500,
-        systemInstruction
-      }
+      systemInstruction
     });
 
-    return result.text || '';
+    const result = await Promise.race([
+      model.generateContent({
+        contents,
+        generationConfig: {
+          maxOutputTokens: 500
+        }
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini API timeout')), 15000))
+    ]);
+
+    return result.response.text() || '';
   } catch (err: any) {
-    console.error('Gemini Chat Error:', err);
+    console.error('Gemini Error:', err);
     return `🤖 **[SmartServe-AI Co-pilot]** Sorry, I encountered an error communicating with Gemini: ${err.message || err}`;
   }
 }
@@ -528,11 +549,12 @@ Requirements:
 3. Offer 2 actionable operational suggestions.
 4. Keep under 300 words. Use clean markdown formatting.`;
 
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt
-    });
-    return result.text || '';
+    const model = getGenAIClient().getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini API timeout')), 15000))
+    ]);
+    return result.response.text() || '';
   } catch (err: any) {
     console.error('Gemini Summary Error:', err);
     return `# Daily Operations Report\n\nFailed to compile AI summary: ${err.message || err}`;

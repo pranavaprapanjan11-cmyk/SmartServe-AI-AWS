@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ai } from '../../services/gemini.service';
+import { getModel } from '../../services/gemini.service';
 
 export async function handleAssistantChat(req: Request, res: Response) {
   try {
@@ -24,23 +24,33 @@ export async function handleAssistantChat(req: Request, res: Response) {
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
 
-    const responseStream = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
-      contents,
-      config: {
-        systemInstruction: 'You are SmartServe AI, an elite, real-time operations manager companion for a smart restaurant ecosystem. You help managers interpret business analytics, understand live inventory levels, check kitchen queues, and calculate table turnarounds based on database layouts. Format your operational recommendations using clean, readable Markdown syntax.',
-      }
-    });
+    console.log("AI Request Received (Stream)");
 
-    for await (const chunk of responseStream) {
+    const systemInstruction = `You are SmartServe AI.
+You help restaurant owners, managers, waiters, and kitchen staff.
+You answer questions about:
+- Orders
+- Menu items
+- Revenue
+- Customer analytics
+- Restaurant operations
+- Inventory
+- Staff productivity
+Provide concise, actionable responses. Format your operational recommendations using clean, readable Markdown syntax.`;
+
+    const model = getModel(systemInstruction);
+    const responseStream = await model.generateContentStream({ contents });
+
+    for await (const chunk of responseStream.stream) {
       const text = chunk.text;
       if (text) {
         res.write(text);
       }
     }
+    console.log("Gemini Response Generated (Stream)");
     res.end();
   } catch (err: any) {
-    console.error('Assistant chat failed:', err);
+    console.error('Gemini Error:', err);
     // If headers have already been sent, end the response
     if (res.headersSent) {
       if (!res.writableEnded) res.end();

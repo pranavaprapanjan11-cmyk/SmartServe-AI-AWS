@@ -1,7 +1,21 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
-const apiKey = process.env.GEMINI_API_KEY || '';
-export const ai = new GoogleGenAI({ apiKey });
+// Lazy loader for GoogleGenerativeAI client
+let genAIInstance: GoogleGenerativeAI | null = null;
+
+export function getGenAI(): GoogleGenerativeAI {
+  if (!genAIInstance) {
+    genAIInstance = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+  }
+  return genAIInstance;
+}
+
+export function getModel(systemInstruction?: string) {
+  return getGenAI().getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    systemInstruction,
+  });
+}
 
 export async function runStartupTest(): Promise<boolean> {
   console.log('Gemini Key Present:', !!process.env.GEMINI_API_KEY);
@@ -11,12 +25,13 @@ export async function runStartupTest(): Promise<boolean> {
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: 'Reply with SMARTSERVE_GEMINI_OK',
-    });
+    const model = getModel();
+    const response = await Promise.race([
+      model.generateContent('Reply with SMARTSERVE_GEMINI_OK'),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
+    ]);
     
-    const text = (response.text || '').trim();
+    const text = (response.response.text() || '').trim();
     console.log('Gemini Test Response:', text);
     if (text.includes('SMARTSERVE_GEMINI_OK')) {
       console.log('✅ Gemini configured and verified successfully!');
@@ -36,15 +51,12 @@ export async function generateChatResponse(
   systemInstruction: string
 ): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents,
-      config: {
-        maxOutputTokens: 800,
-        systemInstruction,
-      },
-    });
-    return response.text || '';
+    const model = getModel(systemInstruction);
+    const result = await Promise.race([
+      model.generateContent({ contents }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini request timeout (15s)')), 15000))
+    ]);
+    return result.response.text() || '';
   } catch (err: any) {
     console.error('Gemini chat generation failed:', err);
     throw err;
@@ -75,43 +87,32 @@ export async function parseDocumentImage(
   mimeType: string
 ): Promise<ParsedDocumentResult> {
   try {
-    const response = await ai.models.generateContent({
+    const model = getGenAI().getGenerativeModel({
       model: 'gemini-2.5-flash',
-      contents: [
-        'Extract structured details from the provided restaurant menu or invoice/receipt image.',
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType,
-          },
-        },
-      ],
-      config: {
-        systemInstruction:
-          'You are an AI-powered restaurant document processing assistant. You must analyze the image and extract the restaurant name or supplier name (populate both restaurantName and supplierName with this value), invoiceNumber (if none, return empty string), invoiceDate (if none, return empty string), subtotal (sum of items), tax (VAT/GST if any, default 0), and grandTotal (subtotal + tax). For the items list, populate each item with name, description (short description or empty string), category (menu category, or General), price (rate/price), quantity (default 1), unitPrice (rate/price), and totalPrice (quantity * unitPrice). Return a valid JSON matching the schema exactly.',
+      generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: {
-          type: 'OBJECT',
+          type: SchemaType.OBJECT,
           properties: {
-            restaurantName: { type: 'STRING' },
-            supplierName: { type: 'STRING' },
-            invoiceNumber: { type: 'STRING' },
-            invoiceDate: { type: 'STRING' },
-            subtotal: { type: 'NUMBER' },
-            tax: { type: 'NUMBER' },
-            grandTotal: { type: 'NUMBER' },
+            restaurantName: { type: SchemaType.STRING },
+            supplierName: { type: SchemaType.STRING },
+            invoiceNumber: { type: SchemaType.STRING },
+            invoiceDate: { type: SchemaType.STRING },
+            subtotal: { type: SchemaType.NUMBER },
+            tax: { type: SchemaType.NUMBER },
+            grandTotal: { type: SchemaType.NUMBER },
             items: {
-              type: 'ARRAY',
+              type: SchemaType.ARRAY,
               items: {
-                type: 'OBJECT',
+                type: SchemaType.OBJECT,
                 properties: {
-                  name: { type: 'STRING' },
-                  description: { type: 'STRING' },
-                  category: { type: 'STRING' },
-                  price: { type: 'NUMBER' },
-                  quantity: { type: 'NUMBER' },
-                  unitPrice: { type: 'NUMBER' },
-                  totalPrice: { type: 'NUMBER' }
+                  name: { type: SchemaType.STRING },
+                  description: { type: SchemaType.STRING },
+                  category: { type: SchemaType.STRING },
+                  price: { type: SchemaType.NUMBER },
+                  quantity: { type: SchemaType.NUMBER },
+                  unitPrice: { type: SchemaType.NUMBER },
+                  totalPrice: { type: SchemaType.NUMBER }
                 },
                 required: ['name', 'description', 'category', 'price', 'quantity', 'unitPrice', 'totalPrice'],
               },
@@ -119,10 +120,30 @@ export async function parseDocumentImage(
           },
           required: ['restaurantName', 'supplierName', 'invoiceNumber', 'invoiceDate', 'subtotal', 'tax', 'grandTotal', 'items'],
         },
-      },
+      }
     });
 
-    const text = response.text;
+    const result = await Promise.race([
+      model.generateContent({
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: 'Extract structured details from the provided restaurant menu or invoice/receipt image.' },
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType,
+                },
+              },
+            ],
+          }
+        ]
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini OCR parsing request timeout (15s)')), 15000))
+    ]);
+
+    const text = result.response.text();
     if (!text) {
       throw new Error('Gemini returned an empty document parser response');
     }

@@ -140,54 +140,32 @@ export function AIAssistant() {
 
     try {
       // Map the messages history to the schema expected by the backend
-      const payloadMessages = updatedMessages.map(m => ({
+      const history = updatedMessages.slice(0, -1).map(m => ({
         role: m.role === 'user' ? 'user' : 'model',
         content: m.text
       }));
 
-      const res = await fetch(`${API_BASE}/assistant/chat`, {
+      const res = await fetch(`${API_BASE}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ messages: payloadMessages })
+        body: JSON.stringify({
+          message: value,
+          history
+        })
       });
 
       if (!res.ok) {
         throw new Error("Failed to communicate with Assistant");
       }
 
-      // Check if streaming is supported by the browser response
-      const reader = res.body?.getReader();
-      if (!reader) {
-        // Fallback if reader is not available
-        const bodyText = await res.text();
-        setMessages((m) => [...m, { role: "ai", text: bodyText }]);
-        setLoading(false);
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let aiResponseText = "";
-
-      // Append initial empty message for the streaming output
-      setMessages((m) => [...m, { role: "ai", text: "" }]);
-
-      while (true) {
-        const { done, value: chunkValue } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(chunkValue, { stream: true });
-        aiResponseText += chunk;
-
-        // Render response chunks in real time
-        setMessages((prev) => {
-          const next = [...prev];
-          if (next.length > 0) {
-            next[next.length - 1] = { role: "ai", text: aiResponseText };
-          }
-          return next;
-        });
+      const data = await res.json();
+      if (data && data.success) {
+        setMessages((m) => [...m, { role: "ai", text: data.response }]);
+      } else {
+        throw new Error(data?.message || "Invalid response format");
       }
     } catch (err: any) {
       console.error("AI Assistant chat error:", err);
