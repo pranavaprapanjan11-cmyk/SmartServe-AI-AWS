@@ -110,7 +110,7 @@ export async function fetchAiChat(req: RequestWithUser, res: Response) {
     console.error("Gemini Error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message || 'Failed to get chat response'
+      error: err.message || 'Failed to get chat response'
     });
   }
 }

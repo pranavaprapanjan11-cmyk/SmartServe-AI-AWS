@@ -13,6 +13,16 @@ import {
 } from './ai.controller';
 
 const router = Router();
+
+router.get('/debug', (req, res) => {
+  res.json({
+    geminiKeyLoaded: !!process.env.GEMINI_API_KEY,
+    aiRouteLoaded: true,
+    environment: process.env.NODE_ENV || 'production',
+    model: 'gemini-2.5-flash'
+  });
+});
+
 router.use(authenticateJWT);
 
 router.get('/sales-forecast', authorizeRoles(Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN), fetchSalesForecast);
