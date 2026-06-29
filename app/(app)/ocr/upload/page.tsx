@@ -103,21 +103,21 @@ export default function OCRUploadPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Upload Menu"
-        description="Drop or select a menu file to begin automatic extraction"
+        title="Upload Document"
+        description="Drop or select an invoice or menu file to begin automatic extraction"
       />
 
       <div className="rounded-[2rem] border border-border bg-card/60 p-8 shadow-xl backdrop-blur-xl">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between border-b border-border/50 pb-6">
           <div>
-            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">OCR Menu Import</span>
-            <h1 className="mt-2 text-2xl font-bold text-foreground">Drop your menu photo or PDF.</h1>
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">AI Document Import</span>
+            <h1 className="mt-2 text-2xl font-bold text-foreground">Drop your invoice photo or PDF.</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Supported files: JPG, PNG, PDF. The OCR pipeline will preprocess and extract dishes and prices.
+              Supported files: JPG, PNG, PDF. The Gemini AI engine will parse details, items, rates, and totals automatically.
             </p>
           </div>
           <Badge variant="outline" className="px-4 py-2 bg-primary/5 text-primary border-primary/20 text-xs self-start md:self-auto rounded-full">
-            Smart Menu Import
+            Gemini AI Scan
           </Badge>
         </div>
 

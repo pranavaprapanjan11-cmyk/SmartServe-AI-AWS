@@ -12,11 +12,11 @@ export default function OcrPanel() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="OCR Menu Scanner"
-        description="Extract and import restaurant menus automatically using advanced OCR preprocessing"
+        title="OCR Document Scanner"
+        description="Extract invoices and menus automatically using Gemini 2.5 Flash document understanding"
       >
         <Badge variant="success" className="gap-1.5 px-3 py-1 text-xs">
-          <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> Multi-Engine Ready
+          <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" /> Gemini AI Connected
         </Badge>
       </PageHeader>
 
@@ -27,12 +27,12 @@ export default function OcrPanel() {
       >
         <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">OCR Menu Import</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">AI Document Scan</span>
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl bg-gradient-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent">
-              Extract restaurant menus with intelligent OCR.
+              Extract invoices & menus with Gemini AI.
             </h1>
             <p className="mt-4 max-w-xl text-base text-muted-foreground leading-relaxed">
-              Upload a photo or PDF of a menu and let the system detect dishes, prices, and categories automatically.
+              Upload a photo or PDF of a supplier invoice or menu list and let Gemini parse items, rates, tax, and supplier details.
             </p>
           </div>
 
@@ -45,29 +45,29 @@ export default function OcrPanel() {
           <Card className="bg-[#0c101c]/40 border-border/60">
             <CardHeader>
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Zap className="h-5 w-5 text-primary" /> Fast menu capture
+                <Zap className="h-5 w-5 text-primary" /> Gemini AI Engine
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                AI-assisted extraction for print and photographed menus, calibrated for restaurant pricing tables.
+                Document understanding for printed invoices, receipts, and menu templates, powered by Gemini 2.5 Flash.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  OpenCV preprocessing for clear text
+                  AI visual document analysis
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  EasyOCR extraction plus correction layer
+                  Structured invoice rate and total checks
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Structured dish, price, category output
+                  Calculated mathematical confidence score
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Editable review and import workflow
+                  Editable verification and review step
                 </li>
               </ul>
             </CardContent>
@@ -79,13 +79,13 @@ export default function OcrPanel() {
                 <ImageIcon className="h-5 w-5 text-primary" /> Get started
               </CardTitle>
               <CardDescription className="text-muted-foreground">
-                Drop a JPG, PNG, or PDF and let the OCR pipeline return a clean menu draft for review.
+                Drop a JPG, PNG, or PDF and let Gemini extract item names, rates, and totals.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <Link href="/ocr/upload" passHref>
                 <Button size="lg" className="w-full sm:w-auto rounded-full font-semibold gap-2 shadow-lg shadow-primary/10">
-                  Upload Menu Image <ArrowRight className="h-4 w-4" />
+                  Upload Document Image <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
             </CardContent>
