@@ -36,7 +36,14 @@ export async function createMenuCategory(
     payload.display_order || 0,
   ]);
 
-  return rows[0] as MenuCategory;
+  const category = rows[0] as MenuCategory;
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'menuUpdated');
+  } catch (err) {
+    console.error('Failed to dispatch menu update notification:', err);
+  }
+  return category;
 }
 
 export async function getCategories(restaurantId: string): Promise<MenuCategory[]> {
@@ -105,6 +112,13 @@ export async function createMenuItem(
     const { rows: analyticsRows } = await client.query(analyticsSql, [menuItem.id]);
 
     await client.query('COMMIT');
+
+    try {
+      const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+      notifyWorkspaceByRestaurantId(restaurantId, 'menuUpdated');
+    } catch (err) {
+      console.error('Failed to dispatch menu update notification:', err);
+    }
 
     return {
       ...menuItem,
@@ -233,6 +247,13 @@ export async function updateMenuItem(
     [itemId]
   );
 
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'menuUpdated');
+  } catch (err) {
+    console.error('Failed to dispatch menu update notification:', err);
+  }
+
   return {
     ...updated,
     analytics: analytics.rows[0],
@@ -245,6 +266,13 @@ export async function deleteMenuItem(restaurantId: string, itemId: string): Prom
 
   if (result.rowCount === 0) {
     throw new Error('Menu item not found');
+  }
+
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'menuUpdated');
+  } catch (err) {
+    console.error('Failed to dispatch menu update notification:', err);
   }
 }
 
@@ -264,6 +292,13 @@ export async function toggleMenuItemAvailability(
 
   if (rows.length === 0) {
     throw new Error('Menu item not found');
+  }
+
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'menuUpdated');
+  } catch (err) {
+    console.error('Failed to dispatch menu update notification:', err);
   }
 
   return rows[0] as MenuItem;

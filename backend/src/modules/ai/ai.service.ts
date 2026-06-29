@@ -434,10 +434,10 @@ export async function getLiveContext(userId: string, role: string): Promise<any>
   };
 }
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 // Initialize the Google Gen AI client
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
 export async function getChatResponse(
   userId: string,
@@ -459,8 +459,6 @@ Live context retrieved:
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
     // Structure chat history for Gemini API
     const contents = history.map(item => ({
       role: item.role === 'user' ? 'user' : 'model',
@@ -486,18 +484,16 @@ You have access to the following live restaurant data to answer queries accurate
 
 Answer briefly, professionally, and use clean markdown formatting. Keep the tone helpful, efficient, and operational.`;
 
-    const result = await model.generateContent({
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
       contents,
-      generationConfig: {
+      config: {
         maxOutputTokens: 500,
-      },
-      systemInstruction: {
-        parts: [{ text: systemInstruction }],
-        role: 'system'
+        systemInstruction
       }
     });
 
-    return result.response.text();
+    return result.text || '';
   } catch (err: any) {
     console.error('Gemini Chat Error:', err);
     return `🤖 **[SmartServe-AI Co-pilot]** Sorry, I encountered an error communicating with Gemini: ${err.message || err}`;
@@ -519,8 +515,6 @@ export async function getAiSummary(userId: string, role: string): Promise<string
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
     const prompt = `You are a senior restaurant consultant. Generate a brief daily business summary report based on the following live operating data:
 - Today's Revenue: ₹${context.revenue?.today || 0}
 - Today's Orders count: ${context.orders?.today_orders_count || 0}
@@ -534,8 +528,11 @@ Requirements:
 3. Offer 2 actionable operational suggestions.
 4. Keep under 300 words. Use clean markdown formatting.`;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt
+    });
+    return result.text || '';
   } catch (err: any) {
     console.error('Gemini Summary Error:', err);
     return `# Daily Operations Report\n\nFailed to compile AI summary: ${err.message || err}`;

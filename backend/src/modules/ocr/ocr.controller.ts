@@ -91,67 +91,131 @@ router.post('/parse', authenticateJWT, upload.single('file'), async (req: any, r
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        'Extract structured receipt/invoice details from the provided image payload.',
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType
-          }
-        }
-      ],
-      config: {
-        systemInstruction: 'You are an AI-powered receipt/invoice processing assistant. Parse the text from the receipt/invoice image and return a JSON object with: supplier name (string), items (array of objects containing name (string), quantity (number), and price (number)), and totalAmount (number). Ensure the output matches the required JSON Schema exactly.',
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            supplier: { type: 'STRING' },
-            items: {
-              type: 'ARRAY',
-              items: {
-                type: 'OBJECT',
-                properties: {
-                  name: { type: 'STRING' },
-                  quantity: { type: 'NUMBER' },
-                  price: { type: 'NUMBER' }
-                },
-                required: ['name', 'quantity', 'price']
-              }
-            },
-            totalAmount: { type: 'NUMBER' }
-          },
-          required: ['supplier', 'items', 'totalAmount']
-        }
-      }
-    });
+    let attempts = 0;
+    let parsedResult: any = null;
+    let geminiError: any = null;
 
-    const text = response.text;
-    if (!text) {
-      return res.status(500).json({ message: 'Gemini returned an empty response' });
+    while (attempts < 2) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            'Extract structured invoice/receipt details from the provided image payload.',
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType
+              }
+            }
+          ],
+          config: {
+            systemInstruction: 'You are an AI-powered restaurant document processing assistant. If the document is an invoice/receipt, parse the supplierName, invoiceNumber, invoiceDate, items (name, quantity, unitPrice, totalPrice), subtotal, tax, and grandTotal. If the document is a menu card/list, set supplierName as the restaurant name (or "Menu"), items with name (dish name), quantity (1), unitPrice (dish price), and totalPrice (dish price), and set subtotal, tax (0), and grandTotal as the sum of dishes. Return a JSON object matching the Schema exactly. Do not leave required values blank or null.',
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                supplierName: { type: 'STRING' },
+                invoiceNumber: { type: 'STRING' },
+                invoiceDate: { type: 'STRING' },
+                items: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      name: { type: 'STRING' },
+                      quantity: { type: 'NUMBER' },
+                      unitPrice: { type: 'NUMBER' },
+                      totalPrice: { type: 'NUMBER' }
+                    },
+                    required: ['name', 'quantity', 'unitPrice', 'totalPrice']
+                  }
+                },
+                subtotal: { type: 'NUMBER' },
+                tax: { type: 'NUMBER' },
+                grandTotal: { type: 'NUMBER' }
+              },
+              required: ['supplierName', 'invoiceNumber', 'invoiceDate', 'items', 'subtotal', 'tax', 'grandTotal']
+            }
+          }
+        });
+
+        const text = response.text;
+        if (!text) {
+          throw new Error('Gemini returned an empty response');
+        }
+
+        parsedResult = JSON.parse(text);
+
+        // Validation check
+        if (!parsedResult.supplierName || !parsedResult.items || !Array.isArray(parsedResult.items) || parsedResult.items.length === 0) {
+          throw new Error('Missing key fields in Gemini output');
+        }
+
+        break;
+      } catch (err) {
+        geminiError = err;
+        attempts++;
+        console.warn(`Gemini OCR parse attempt ${attempts} failed:`, err);
+      }
     }
 
-    const parsedResult = JSON.parse(text);
+    if (!parsedResult) {
+      return res.status(500).json({
+        message: 'Gemini OCR parse and validation failed after retries',
+        error: String(geminiError?.message || geminiError)
+      });
+    }
 
-    // Pass the clean, parsed response object directly to the inventory database router (importOcrInvoice service)
+    // Confidence validation logic
+    let confidence = 0.95;
+    const computedTotal = (parsedResult.items || []).reduce((acc: number, item: any) => acc + (Number(item.quantity) * Number(item.unitPrice)), 0);
+    const subtotal = Number(parsedResult.subtotal || 0);
+    const tax = Number(parsedResult.tax || 0);
+    const grandTotal = Number(parsedResult.grandTotal || 0);
+    
+    let confidenceIssues: string[] = [];
+
+    if (Math.abs((subtotal + tax) - grandTotal) > 2) {
+      confidence -= 0.15;
+      confidenceIssues.push("Sum of subtotal and tax does not equal grand total.");
+    }
+    if (Math.abs(computedTotal - subtotal) > 5 && Math.abs(computedTotal - grandTotal) > 5) {
+      confidence -= 0.15;
+      confidenceIssues.push("Sum of item prices does not match subtotal.");
+    }
+
+    parsedResult.confidence = Math.max(0.1, confidence);
+    parsedResult.confidenceIssues = confidenceIssues;
+
+    return res.json({
+      success: true,
+      data: parsedResult
+    });
+  } catch (err: any) {
+    console.error('Gemini OCR receipt parse failed:', err);
+    return res.status(500).json({ message: 'Gemini OCR parse failed', error: String(err.message || err) });
+  }
+});
+
+// POST /api/ocr/confirm-invoice - commit reviewed invoice to inventory
+router.post('/confirm-invoice', authenticateJWT, async (req: Request, res: Response) => {
+  try {
     const userId = (req as any).user?.id;
     const role = (req as any).user?.role;
     if (!userId || !role) {
       return res.status(401).json({ message: 'Unauthorized: User context is required to register inventory imports.' });
     }
 
-    const purchaseOrder = await importOcrInvoice(userId, role, parsedResult);
+    const payload = req.body;
+    const purchaseOrder = await importOcrInvoice(userId, role, payload);
 
     return res.json({
       success: true,
-      data: parsedResult,
       purchaseOrder
     });
   } catch (err: any) {
-    console.error('Gemini OCR receipt parse failed:', err);
-    return res.status(500).json({ message: 'Gemini OCR parse and inventory import failed', error: String(err.message || err) });
+    console.error('OCR Invoice confirmation failed:', err);
+    return res.status(500).json({ message: 'Invoice import failed', error: String(err.message || err) });
   }
 });
 

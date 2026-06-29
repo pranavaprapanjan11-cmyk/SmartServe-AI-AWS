@@ -25,6 +25,14 @@ async function resolveRestaurantId(userId: string, role: string): Promise<string
   return rows.length > 0 ? rows[0].id : userId;
 }
 
+async function resolveWorkspaceId(userId: string): Promise<string | null> {
+  const { rows } = await pool.query(
+    'SELECT workspace_id FROM users WHERE id = $1 LIMIT 1',
+    [userId]
+  );
+  return rows[0]?.workspace_id || null;
+}
+
 // ==========================================
 // INVENTORY ITEMS
 // ==========================================
@@ -56,6 +64,7 @@ export async function getInventoryItemById(userId: string, role: string, id: str
 
 export async function createInventoryItem(userId: string, role: string, payload: CreateInventoryItemPayload): Promise<InventoryItem> {
   const restaurantId = await resolveRestaurantId(userId, role);
+  const workspaceId = await resolveWorkspaceId(userId);
 
   let categoryId = payload.category_id;
   if (!categoryId) {
@@ -67,10 +76,10 @@ export async function createInventoryItem(userId: string, role: string, payload:
       categoryId = catResult.rows[0].id;
     } else {
       const newCatResult = await pool.query(
-        `INSERT INTO inventory_categories (restaurant_id, name, description)
-         VALUES ($1, $2, $3)
+        `INSERT INTO inventory_categories (restaurant_id, workspace_id, name, description)
+         VALUES ($1, $2, $3, $4)
          RETURNING id`,
-        [restaurantId, 'General', 'Default general inventory category']
+        [restaurantId, workspaceId, 'General', 'Default general inventory category']
       );
       categoryId = newCatResult.rows[0].id;
     }
@@ -86,21 +95,22 @@ export async function createInventoryItem(userId: string, role: string, payload:
       supplierId = supResult.rows[0].id;
     } else {
       const newSupResult = await pool.query(
-        `INSERT INTO suppliers (restaurant_id, name, contact_name, phone)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO suppliers (restaurant_id, workspace_id, name, contact_name, phone)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [restaurantId, 'Default Supplier', 'Manager', '0000000000']
+        [restaurantId, workspaceId, 'Default Supplier', 'Manager', '0000000000']
       );
       supplierId = newSupResult.rows[0].id;
     }
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO inventory_items (restaurant_id, name, description, unit, quantity_on_hand, reorder_threshold, category_id, supplier_id, expiry_date, batch_number, is_active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO inventory_items (restaurant_id, workspace_id, name, description, unit, quantity_on_hand, reorder_threshold, category_id, supplier_id, expiry_date, batch_number, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING *`,
     [
       restaurantId,
+      workspaceId,
       payload.name,
       payload.description || null,
       payload.unit,
@@ -115,6 +125,14 @@ export async function createInventoryItem(userId: string, role: string, payload:
   );
 
   const row = rows[0];
+
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'inventoryUpdated');
+  } catch (err) {
+    console.error('Failed to notify workspace on createInventoryItem:', err);
+  }
+
   return {
     ...row,
     quantity_on_hand: parseFloat(row.quantity_on_hand),
@@ -177,11 +195,13 @@ export async function updateInventoryItem(userId: string, role: string, id: stri
 
   if (payload.quantity_on_hand !== undefined && updatedItem.quantity_on_hand > existing.quantity_on_hand) {
     try {
+      const workspaceId = await resolveWorkspaceId(userId);
       await pool.query(
-        `INSERT INTO activity_events (restaurant_id, event_type, description, payload, created_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
+        `INSERT INTO activity_events (restaurant_id, workspace_id, event_type, description, payload, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
         [
           restaurantId,
+          workspaceId,
           'STOCK_REFILLED',
           `Inventory item ${updatedItem.name} refilled (Stock increased from ${existing.quantity_on_hand} to ${updatedItem.quantity_on_hand} ${updatedItem.unit})`,
           JSON.stringify({ itemId: updatedItem.id, oldQuantity: existing.quantity_on_hand, newQuantity: updatedItem.quantity_on_hand })
@@ -192,6 +212,13 @@ export async function updateInventoryItem(userId: string, role: string, id: stri
     }
   }
 
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'inventoryUpdated');
+  } catch (err) {
+    console.error('Failed to notify workspace on updateInventoryItem:', err);
+  }
+
   return updatedItem;
 }
 
@@ -200,6 +227,13 @@ export async function deleteInventoryItem(userId: string, role: string, id: stri
   const { rowCount } = await pool.query(`DELETE FROM inventory_items WHERE id = $1 AND restaurant_id = $2`, [id, restaurantId]);
   if (rowCount === 0) {
     throw new Error('Inventory item not found');
+  }
+
+  try {
+    const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+    notifyWorkspaceByRestaurantId(restaurantId, 'inventoryUpdated');
+  } catch (err) {
+    console.error('Failed to notify workspace on deleteInventoryItem:', err);
   }
 }
 
@@ -690,6 +724,7 @@ export async function getPurchaseOrderById(userId: string, role: string, id: str
 
 export async function createPurchaseOrder(userId: string, role: string, payload: any): Promise<PurchaseOrder> {
   const restaurantId = await resolveRestaurantId(userId, role);
+  const workspaceId = await resolveWorkspaceId(userId);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -702,23 +737,31 @@ export async function createPurchaseOrder(userId: string, role: string, payload:
     });
 
     const { rows: poRows } = await client.query(
-      `INSERT INTO purchase_orders (restaurant_id, supplier_id, status, notes, total_amount, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO purchase_orders (restaurant_id, workspace_id, supplier_id, status, notes, total_amount, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [restaurantId, payload.supplier_id, payload.status || 'DRAFT', payload.notes || null, total]
+      [restaurantId, workspaceId, payload.supplier_id, payload.status || 'DRAFT', payload.notes || null, total]
     );
     const po = poRows[0];
 
     for (const line of lines) {
       const lineCost = parseFloat(line.quantity) * parseFloat(line.unit_price || line.unit_cost);
       await client.query(
-        `INSERT INTO purchase_order_items (purchase_order_id, inventory_item_id, quantity, unit_cost, total_cost)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [po.id, line.inventory_item_id, line.quantity, line.unit_price || line.unit_cost, lineCost]
+        `INSERT INTO purchase_order_items (purchase_order_id, workspace_id, inventory_item_id, quantity, unit_cost, total_cost)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [po.id, workspaceId, line.inventory_item_id, line.quantity, line.unit_price || line.unit_cost, lineCost]
       );
     }
 
     await client.query('COMMIT');
+
+    try {
+      const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+      notifyWorkspaceByRestaurantId(restaurantId, 'inventoryUpdated');
+    } catch (err) {
+      console.error('Failed to notify workspace on createPurchaseOrder:', err);
+    }
+
     const fullPo = await getPurchaseOrderById(userId, role, po.id);
     return fullPo!;
   } catch (err) {
@@ -731,6 +774,7 @@ export async function createPurchaseOrder(userId: string, role: string, payload:
 
 export async function updatePurchaseOrderStatus(userId: string, role: string, id: string, status: string): Promise<PurchaseOrder> {
   const restaurantId = await resolveRestaurantId(userId, role);
+  const workspaceId = await resolveWorkspaceId(userId);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -765,17 +809,18 @@ export async function updatePurchaseOrderStatus(userId: string, role: string, id
         // Log transaction
         await client.query(
           `INSERT INTO inventory_transactions
-            (restaurant_id, inventory_item_id, change_amount, transaction_type, note, created_at)
-           VALUES ($1, $2, $3, 'STOCK_IN', $4, NOW())`,
-          [restaurantId, item.inventory_item_id, item.quantity, `Purchase order delivery: ${po.id}`]
+            (restaurant_id, workspace_id, inventory_item_id, change_amount, transaction_type, note, created_at)
+           VALUES ($1, $2, $3, $4, 'STOCK_IN', $5, NOW())`,
+          [restaurantId, workspaceId, item.inventory_item_id, item.quantity, `Purchase order delivery: ${po.id}`]
         );
 
         // Log refilled activity
         await client.query(
-          `INSERT INTO activity_events (restaurant_id, event_type, description, payload, created_at)
-           VALUES ($1, $2, $3, $4, NOW())`,
+          `INSERT INTO activity_events (restaurant_id, workspace_id, event_type, description, payload, created_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
           [
             restaurantId,
+            workspaceId,
             'STOCK_REFILLED',
             `Inventory item ${item.inventory_item_name} refilled via PO Delivery (Added ${item.quantity} ${item.unit})`,
             JSON.stringify({ itemId: item.inventory_item_id, quantityAdded: item.quantity, poId: po.id })
@@ -801,6 +846,14 @@ export async function updatePurchaseOrderStatus(userId: string, role: string, id
     }
 
     await client.query('COMMIT');
+
+    try {
+      const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+      notifyWorkspaceByRestaurantId(restaurantId, 'inventoryUpdated');
+    } catch (err) {
+      console.error('Failed to notify workspace on updatePurchaseOrderStatus:', err);
+    }
+
     const updatedPo = await getPurchaseOrderById(userId, role, id);
     return updatedPo!;
   } catch (err) {
@@ -1328,19 +1381,28 @@ export async function getAuditForm(userId: string, role: string): Promise<any[]>
 export async function importOcrInvoice(
   userId: string,
   role: string,
-  payload: {
-    supplier: string;
-    items: { name: string; quantity: number; price: number }[];
-    totalAmount: number;
-  }
+  payload: any
 ) {
   const restaurantId = await resolveRestaurantId(userId, role);
+  const workspaceId = await resolveWorkspaceId(userId);
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
+    // Dynamic mapping supporting both legacy and new invoice schemas
+    const supplierName = (payload.supplierName || payload.supplier || 'Default OCR Supplier').trim();
+    const invoiceNumber = payload.invoiceNumber || '';
+    const invoiceDate = payload.invoiceDate || '';
+    const grandTotal = payload.grandTotal !== undefined ? Number(payload.grandTotal) : (payload.totalAmount !== undefined ? Number(payload.totalAmount) : 0);
+
+    const rawItems = payload.items || [];
+    const parsedItems = rawItems.map((item: any) => ({
+      name: item.name,
+      quantity: Number(item.quantity || 1),
+      unitPrice: item.unitPrice !== undefined ? Number(item.unitPrice) : (item.price !== undefined ? Number(item.price) : 0)
+    }));
+
     // 1. Find or create supplier
-    const supplierName = (payload.supplier || 'Default OCR Supplier').trim();
     let supplierId: string;
     const { rows: supRows } = await client.query(
       `SELECT id FROM suppliers WHERE restaurant_id = $1 AND name = $2`,
@@ -1350,10 +1412,10 @@ export async function importOcrInvoice(
       supplierId = supRows[0].id;
     } else {
       const { rows: newSupRows } = await client.query(
-        `INSERT INTO suppliers (restaurant_id, name, is_active, created_at)
-         VALUES ($1, $2, true, NOW())
+        `INSERT INTO suppliers (restaurant_id, workspace_id, name, is_active, created_at)
+         VALUES ($1, $2, $3, true, NOW())
          RETURNING id`,
-        [restaurantId, supplierName]
+        [restaurantId, workspaceId, supplierName]
       );
       supplierId = newSupRows[0].id;
     }
@@ -1368,10 +1430,10 @@ export async function importOcrInvoice(
       categoryId = catRows[0].id;
     } else {
       const { rows: newCatRows } = await client.query(
-        `INSERT INTO inventory_categories (restaurant_id, name, created_at)
-         VALUES ($1, 'General', NOW())
+        `INSERT INTO inventory_categories (restaurant_id, workspace_id, name, created_at)
+         VALUES ($1, $2, 'General', NOW())
          RETURNING id`,
-        [restaurantId]
+        [restaurantId, workspaceId]
       );
       categoryId = newCatRows[0].id;
     }
@@ -1379,7 +1441,7 @@ export async function importOcrInvoice(
     const orderedItems = [];
 
     // 3. For each item, find or create inventory item
-    for (const item of payload.items || []) {
+    for (const item of parsedItems) {
       const itemName = (item.name || 'Unnamed Item').trim();
       let itemId: string;
       const { rows: itemRows } = await client.query(
@@ -1390,38 +1452,37 @@ export async function importOcrInvoice(
         itemId = itemRows[0].id;
       } else {
         const { rows: newItemRows } = await client.query(
-          `INSERT INTO inventory_items (restaurant_id, category_id, supplier_id, name, unit, quantity_on_hand, reorder_threshold, created_at)
-           VALUES ($1, $2, $3, $4, 'units', 0, 0, NOW())
+          `INSERT INTO inventory_items (restaurant_id, workspace_id, category_id, supplier_id, name, unit, quantity_on_hand, reorder_threshold, created_at)
+           VALUES ($1, $2, $3, $4, $5, 'units', 0, 0, NOW())
            RETURNING id`,
-          [restaurantId, categoryId, supplierId, itemName]
+          [restaurantId, workspaceId, categoryId, supplierId, itemName]
         );
         itemId = newItemRows[0].id;
       }
 
       orderedItems.push({
         inventory_item_id: itemId,
-        quantity: Number(item.quantity || 1),
-        unit_cost: Number(item.price || 0)
+        quantity: item.quantity,
+        unit_cost: item.unitPrice
       });
     }
 
     // 4. Create the purchase order with status DELIVERED
-    const totalAmount = Number(payload.totalAmount || 0);
-
+    const notesStr = `Imported via Receipt OCR. Invoice #${invoiceNumber} dated ${invoiceDate}`.trim();
     const { rows: poRows } = await client.query(
-      `INSERT INTO purchase_orders (restaurant_id, supplier_id, status, notes, total_amount, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO purchase_orders (restaurant_id, workspace_id, supplier_id, status, notes, total_amount, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        RETURNING *`,
-      [restaurantId, supplierId, 'DELIVERED', 'Imported via Receipt OCR', totalAmount]
+      [restaurantId, workspaceId, supplierId, 'DELIVERED', notesStr, grandTotal]
     );
     const po = poRows[0];
 
     for (const item of orderedItems) {
       const lineCost = item.quantity * item.unit_cost;
       await client.query(
-        `INSERT INTO purchase_order_items (purchase_order_id, inventory_item_id, quantity, unit_cost, total_cost)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [po.id, item.inventory_item_id, item.quantity, item.unit_cost, lineCost]
+        `INSERT INTO purchase_order_items (purchase_order_id, workspace_id, inventory_item_id, quantity, unit_cost, total_cost)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [po.id, workspaceId, item.inventory_item_id, item.quantity, item.unit_cost, lineCost]
       );
 
       // Increment stock
@@ -1436,17 +1497,18 @@ export async function importOcrInvoice(
       // Log transaction
       await client.query(
         `INSERT INTO inventory_transactions
-          (restaurant_id, inventory_item_id, change_amount, transaction_type, note, created_at)
-         VALUES ($1, $2, $3, 'STOCK_IN', $4, NOW())`,
-        [restaurantId, item.inventory_item_id, item.quantity, `Receipt OCR import PO delivery: ${po.id}`]
+          (restaurant_id, workspace_id, inventory_item_id, change_amount, transaction_type, note, created_at)
+         VALUES ($1, $2, $3, $4, 'STOCK_IN', $5, NOW())`,
+        [restaurantId, workspaceId, item.inventory_item_id, item.quantity, `Receipt OCR import PO delivery: ${po.id}`]
       );
 
       // Log activity
       await client.query(
-        `INSERT INTO activity_events (restaurant_id, event_type, description, payload, created_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
+        `INSERT INTO activity_events (restaurant_id, workspace_id, event_type, description, payload, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())`,
         [
           restaurantId,
+          workspaceId,
           'STOCK_REFILLED',
           `Inventory item refilled via OCR Invoice (Added ${item.quantity} units)`,
           JSON.stringify({ itemId: item.inventory_item_id, quantityAdded: item.quantity, poId: po.id })
@@ -1455,6 +1517,15 @@ export async function importOcrInvoice(
     }
 
     await client.query('COMMIT');
+
+    // Notify workspace
+    try {
+      const { notifyWorkspaceByRestaurantId } = require('../workspace/workspace.sse');
+      notifyWorkspaceByRestaurantId(restaurantId, 'inventoryUpdated');
+    } catch (sseErr) {
+      console.error('Failed to notify workspace on OCR import:', sseErr);
+    }
+
     return po;
   } catch (err) {
     await client.query('ROLLBACK');

@@ -46,8 +46,12 @@ export async function uploadMenuFile(file: File) {
   return res.data;
 }
 
-export async function parseMenuFile(fileId: string) {
-  const res = await axios.post<OCRParseResult>(`${API_BASE}/ocr/parse`, { fileId });
+export async function parseMenuFile(fileId: string, token: string) {
+  const res = await axios.post<any>(
+    `${API_BASE}/ocr/parse`,
+    { fileId },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
   return res.data;
 }
 
@@ -60,6 +64,15 @@ export async function importMenuItems(items: ExtractedItem[], token: string) {
   const res = await axios.post<{ created: any[] }>(
     `${API_BASE}/ocr/import`,
     { items },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+}
+
+export async function confirmInvoice(payload: any, token: string) {
+  const res = await axios.post<{ success: boolean; purchaseOrder: any }>(
+    `${API_BASE}/ocr/confirm-invoice`,
+    payload,
     { headers: { Authorization: `Bearer ${token}` } }
   );
   return res.data;
